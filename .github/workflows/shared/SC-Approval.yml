@@ -1,0 +1,16 @@
+name: SC-Approval
+
+on:
+  workflow_call:
+
+jobs:
+  approval:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Await manual approval
+        uses: trstringer/manual-approval@v1
+        with:
+          approvers: harry.solsem
+          minimum-approvals: 1
+          issue-title: "Release approval required"
+          issue-body: "Approve release notes and deployment."
