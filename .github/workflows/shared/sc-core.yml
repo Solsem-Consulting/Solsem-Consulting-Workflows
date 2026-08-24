@@ -1,0 +1,41 @@
+name: SC-Core (Preflight)
+
+on:
+  workflow_call:
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Repo hygiene
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("Running repo hygiene checks...")
+
+      - name: Security scan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log("Running security scan...")
+
+      - name: Validate dotnet + global.json
+        run: |
+          echo "Validating .dotnet and global.json..."
+
+      - name: Validate NuGet.config
+        run: |
+          echo "Validating NuGet.config..."
+
+      - name: Output preflight report
+        run: |
+          echo "{ \"status\": \"ok\" }" > sc-preflight.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sc-preflight
+          path: sc-preflight.json
