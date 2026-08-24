@@ -1,0 +1,41 @@
+name: SC-Deploy
+
+on:
+  workflow_call:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: sc-build
+          path: build
+
+      - name: Run publish.ps1
+        shell: pwsh
+        run: |
+          ./publish.ps1 -Source ./build -Verbose
+
+      - name: FTP deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: build
+
+      - name: Upload deploy log
+        run: |
+          echo "Deployment completed" > sc-deploy-log.txt
+        shell: bash
+
+      - name: Upload log
+        uses: actions/upload-artifact@v4
+        with:
+          name: sc-deploy-log
+          path: sc-deploy-log.txt
