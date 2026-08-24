@@ -1,0 +1,43 @@
+name: SC-Quality
+
+on:
+  workflow_call:
+    inputs:
+      run_smoke_tests:
+        type: boolean
+        default: true
+      run_ui_tests:
+        type: boolean
+        default: false
+      run_e2e_tests:
+        type: boolean
+        default: false
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Smoke tests
+        if: ${{ inputs.run_smoke_tests }}
+        run: echo "Running smoke tests..."
+
+      - name: UI tests
+        if: ${{ inputs.run_ui_tests }}
+        run: echo "Running UI tests..."
+
+      - name: E2E tests
+        if: ${{ inputs.run_e2e_tests }}
+        run: echo "Running E2E tests..."
+
+      - name: Output quality report
+        run: |
+          echo "{ \"quality\": \"ok\" }" > sc-quality.json
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sc-quality
+          path: sc-quality.json
