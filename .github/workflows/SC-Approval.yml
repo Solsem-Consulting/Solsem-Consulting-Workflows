@@ -8,8 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Await manual approval
-        uses: trstringer/manual-approval@v1
+        uses: trstringer/manual-approval@v1.10.0
         with:
+          secret: ${{ github.TOKEN }}
           approvers: harry.solsem
           minimum-approvals: 1
           issue-title: "Release approval required"

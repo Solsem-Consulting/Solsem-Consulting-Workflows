@@ -8,16 +8,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Repo hygiene
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             console.log("Running repo hygiene checks...")
 
       - name: Security scan
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             console.log("Running security scan...")
@@ -35,7 +35,7 @@ jobs:
           echo "{ \"status\": \"ok\" }" > sc-preflight.json
 
       - name: Upload report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sc-preflight
           path: sc-preflight.json
