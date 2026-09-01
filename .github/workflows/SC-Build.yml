@@ -4,13 +4,18 @@ on:
   workflow_call:
     inputs:
       solution:
-        description: "Navn på solution-fil som skal bygges"
+        description: "Solution-fil som skal bygges"
         required: true
+        type: string
+      solution_path:
+        description: "Path til solution (default: src)"
+        required: false
+        default: "src"
         type: string
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -22,16 +27,16 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Restore
-        run: dotnet restore src/${{ inputs.solution }}
+        run: dotnet restore ${{ inputs.solution_path }}/${{ inputs.solution }}
 
       - name: Build
-        run: dotnet build src/${{ inputs.solution }} --configuration Release --no-restore
+        run: dotnet build ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test src/${{ inputs.solution }} --configuration Release --no-build
+        run: dotnet test ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-build
 
       - name: Pack
-        run: dotnet pack src/${{ inputs.solution }} --configuration Release --no-build --output ./artifacts
+        run: dotnet pack ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-build --output ./artifacts
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
