@@ -59,5 +59,20 @@ jobs:
       - name: Build
         shell: pwsh
         run: |
-          dotnet build $env:BUILD_TARGET --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
+          $arguments = @(
+            'build',
+            $env:BUILD_TARGET,
+            '--configuration', 'Release',
+            '--nologo',
+            '--verbosity', 'minimal',
+            '-m:1',
+            '-nr:false',
+            '-p:EnableWindowsTargeting=true',
+            '-p:UseSharedCompilation=false'
+          )
+          if (-not [string]::IsNullOrWhiteSpace($env:NUGET_CONFIG)) {
+            $configPath = (Resolve-Path -LiteralPath $env:NUGET_CONFIG).Path
+            $arguments += "-p:RestoreConfigFile=$configPath"
+          }
+          & dotnet @arguments
           if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
