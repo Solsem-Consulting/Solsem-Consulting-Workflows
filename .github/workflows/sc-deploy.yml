@@ -2,40 +2,40 @@ name: SC-Deploy
 
 on:
   workflow_call:
+    inputs:
+      tag:
+        description: "Release tag for product workflows that support an explicit tag"
+        required: false
+        default: ""
+        type: string
+      version:
+        description: "Release version for product workflows that support an explicit version"
+        required: false
+        default: ""
+        type: string
 
 jobs:
-  deploy:
+  cvsmia:
+    if: ${{ github.repository == 'Solsem-Consulting/cvsmia' }}
+    uses: Solsem-Consulting/cvsmia/.github/workflows/release-publish-ftp.yml@main
+    with:
+      tag: ${{ inputs.tag }}
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  karemo:
+    if: ${{ github.repository == 'Solsem-Consulting/KaremoSuite' }}
+    uses: Solsem-Consulting/KaremoSuite/.github/workflows/publish-ftp.yml@main
+    secrets: inherit
+
+  unsupported-repository:
+    if: ${{ github.repository != 'Solsem-Consulting/cvsmia' && github.repository != 'Solsem-Consulting/KaremoSuite' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v8
-        with:
-          name: sc-build
-          path: build
-
-      - name: Run publish.ps1
-        shell: pwsh
-        run: |
-          ./publish.ps1 -Source ./build -Verbose
-
-      - name: FTP deploy
-        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: build
-
-      - name: Upload deploy log
-        run: |
-          echo "Deployment completed" > sc-deploy-log.txt
+      - name: Reject unsupported repository
         shell: bash
-
-      - name: Upload log
-        uses: actions/upload-artifact@v4
-        with:
-          name: sc-deploy-log
-          path: sc-deploy-log.txt
+        env:
+          CALLER_REPOSITORY: ${{ github.repository }}
+        run: |
+          echo "Unsupported release caller: ${CALLER_REPOSITORY}" >&2
+          exit 1

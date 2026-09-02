@@ -3,43 +3,61 @@ name: SC-Build
 on:
   workflow_call:
     inputs:
-      solution:
-        description: "Solution-fil som skal bygges"
+      build_target:
+        description: "Repository-relative project or solution path used by the shared build gate"
         required: true
         type: string
-      solution_path:
-        description: "Path til solution (default: src)"
+      nuget_config:
+        description: "Optional repository-relative NuGet.config path"
         required: false
-        default: "src"
+        default: ""
         type: string
+      dotnet_version:
+        description: ".NET SDK version"
+        required: false
+        default: "10.0.x"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
 
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN || secrets.GH_PACKAGES_READ_TOKEN || github.token }}
+      BUILD_TARGET: ${{ inputs.build_target }}
+      NUGET_CONFIG: ${{ inputs.nuget_config }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "10.0.x"
+          dotnet-version: ${{ inputs.dotnet_version }}
 
       - name: Restore
-        run: dotnet restore ${{ inputs.solution_path }}/${{ inputs.solution }}
+        shell: pwsh
+        run: |
+          if (-not (Test-Path -LiteralPath $env:BUILD_TARGET -PathType Leaf)) {
+            throw "Build target not found: $env:BUILD_TARGET"
+          }
+          $arguments = @('restore', $env:BUILD_TARGET, '--nologo', '--verbosity', 'minimal', '-m:1', '-nr:false')
+          if (-not [string]::IsNullOrWhiteSpace($env:NUGET_CONFIG)) {
+            if (-not (Test-Path -LiteralPath $env:NUGET_CONFIG -PathType Leaf)) {
+              throw "NuGet config not found: $env:NUGET_CONFIG"
+            }
+            $arguments += @('--configfile', $env:NUGET_CONFIG)
+          }
+          & dotnet @arguments
+          if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed." }
 
       - name: Build
-        run: dotnet build ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-restore
-
-      - name: Test
-        run: dotnet test ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-build
-
-      - name: Pack
-        run: dotnet pack ${{ inputs.solution_path }}/${{ inputs.solution }} --configuration Release --no-build --output ./artifacts
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: nuget-packages
-          path: artifacts
+        shell: pwsh
+        run: |
+          dotnet build $env:BUILD_TARGET --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
+          if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }

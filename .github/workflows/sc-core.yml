@@ -1,7 +1,15 @@
-name: SC-Core (Preflight)
+name: SC-Core
 
 on:
   workflow_call:
+    inputs:
+      solution:
+        description: "Repository-relative solution path"
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   preflight:
@@ -10,32 +18,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Repo hygiene
-        uses: actions/github-script@v9
-        with:
-          script: |
-            console.log("Running repo hygiene checks...")
-
-      - name: Security scan
-        uses: actions/github-script@v9
-        with:
-          script: |
-            console.log("Running security scan...")
-
-      - name: Validate dotnet + global.json
+      - name: Validate repository contract
+        shell: pwsh
+        env:
+          SOLUTION: ${{ inputs.solution }}
         run: |
-          echo "Validating .dotnet and global.json..."
+          if ([string]::IsNullOrWhiteSpace($env:SOLUTION)) {
+            throw "Solution path is required."
+          }
+          if ([IO.Path]::GetExtension($env:SOLUTION) -notin @('.sln', '.slnx')) {
+            throw "Solution must be a .sln or .slnx file: $env:SOLUTION"
+          }
+          if (-not (Test-Path -LiteralPath $env:SOLUTION -PathType Leaf)) {
+            throw "Solution not found: $env:SOLUTION"
+          }
+          git diff --check
+          if ($LASTEXITCODE -ne 0) {
+            throw "Repository contains whitespace errors."
+          }
 
-      - name: Validate NuGet.config
+      - name: Write preflight summary
+        shell: pwsh
+        env:
+          SOLUTION: ${{ inputs.solution }}
         run: |
-          echo "Validating NuGet.config..."
-
-      - name: Output preflight report
-        run: |
-          echo "{ \"status\": \"ok\" }" > sc-preflight.json
-
-      - name: Upload report
-        uses: actions/upload-artifact@v7
-        with:
-          name: sc-preflight
-          path: sc-preflight.json
+          @(
+            '## Shared preflight'
+            ''
+            "- Repository: ``${{ github.repository }}``"
+            "- Ref: ``${{ github.ref }}``"
+            "- Solution: ``$env:SOLUTION``"
+            '- Status: passed'
+          ) -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

@@ -3,6 +3,10 @@ name: SC-Approval
 on:
   workflow_call:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   approval:
     runs-on: ubuntu-latest
@@ -11,7 +15,7 @@ jobs:
         uses: trstringer/manual-approval@v1.13.1
         with:
           secret: ${{ github.TOKEN }}
-          approvers: harry.solsem
+          approvers: HarrySolsem
           minimum-approvals: 1
           issue-title: "Release approval required"
           issue-body: "Approve release notes and deployment."

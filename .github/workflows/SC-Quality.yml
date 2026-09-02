@@ -3,41 +3,78 @@ name: SC-Quality
 on:
   workflow_call:
     inputs:
-      run_smoke_tests:
-        type: boolean
-        default: true
-      run_ui_tests:
-        type: boolean
-        default: false
-      run_e2e_tests:
-        type: boolean
-        default: false
+      test_projects:
+        description: "JSON array of repository-relative test project paths"
+        required: true
+        type: string
+      nuget_config:
+        description: "Optional repository-relative NuGet.config path"
+        required: false
+        default: ""
+        type: string
+      dotnet_version:
+        description: ".NET SDK version"
+        required: false
+        default: "10.0.x"
+        type: string
+
+permissions:
+  contents: read
+  packages: read
 
 jobs:
   quality:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN || secrets.GH_PACKAGES_READ_TOKEN || github.token }}
+      TEST_PROJECTS: ${{ inputs.test_projects }}
+      NUGET_CONFIG: ${{ inputs.nuget_config }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Smoke tests
-        if: ${{ inputs.run_smoke_tests }}
-        run: echo "Running smoke tests..."
-
-      - name: UI tests
-        if: ${{ inputs.run_ui_tests }}
-        run: echo "Running UI tests..."
-
-      - name: E2E tests
-        if: ${{ inputs.run_e2e_tests }}
-        run: echo "Running E2E tests..."
-
-      - name: Output quality report
-        run: |
-          echo "{ \"quality\": \"ok\" }" > sc-quality.json
-
-      - name: Upload report
-        uses: actions/upload-artifact@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
         with:
-          name: sc-quality
-          path: sc-quality.json
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Run configured tests
+        shell: pwsh
+        run: |
+          $projects = @($env:TEST_PROJECTS | ConvertFrom-Json)
+          if ($projects.Count -eq 0) {
+            throw "At least one test project is required."
+          }
+
+          foreach ($project in $projects) {
+            if ([IO.Path]::GetExtension($project) -ne '.csproj' -or -not (Test-Path -LiteralPath $project -PathType Leaf)) {
+              throw "Invalid test project: $project"
+            }
+
+            $restoreArguments = @('restore', $project, '--nologo', '--verbosity', 'minimal', '-m:1', '-nr:false')
+            if (-not [string]::IsNullOrWhiteSpace($env:NUGET_CONFIG)) {
+              if (-not (Test-Path -LiteralPath $env:NUGET_CONFIG -PathType Leaf)) {
+                throw "NuGet config not found: $env:NUGET_CONFIG"
+              }
+              $restoreArguments += @('--configfile', $env:NUGET_CONFIG)
+            }
+
+            & dotnet @restoreArguments
+            if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $project." }
+
+            dotnet test $project --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
+            if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $project." }
+          }
+
+      - name: Write quality summary
+        shell: pwsh
+        run: |
+          $projects = @($env:TEST_PROJECTS | ConvertFrom-Json)
+          @(
+            '## Shared quality gate'
+            ''
+            "- Test projects: $($projects.Count)"
+            '- Status: passed'
+          ) -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
