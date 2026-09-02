@@ -2,6 +2,17 @@ name: SC-Approval
 
 on:
   workflow_call:
+    inputs:
+      release_tag:
+        description: "Optional release tag override"
+        required: false
+        default: ""
+        type: string
+      release_version:
+        description: "Optional release version override"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -11,11 +22,131 @@ jobs:
   approval:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout release candidate
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Prepare approval context
+        id: approval-context
+        shell: pwsh
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag || github.event.inputs.tag || github.event.release.tag_name || (github.ref_type == 'tag' && github.ref_name) || '' }}
+          REQUESTED_VERSION: ${{ inputs.release_version || github.event.inputs.version || '' }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          $version = $env:REQUESTED_VERSION
+          if ([string]::IsNullOrWhiteSpace($version) -and (Test-Path -LiteralPath 'Directory.Build.props')) {
+            [xml]$props = Get-Content -LiteralPath 'Directory.Build.props'
+            $version = [string]$props.Project.PropertyGroup.Version
+          }
+          if ([string]::IsNullOrWhiteSpace($version) -and (Test-Path -LiteralPath 'src/cvsmia/VERSION')) {
+            $version = (Get-Content -LiteralPath 'src/cvsmia/VERSION' -Raw).Trim()
+          }
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = '(ikke funnet)'
+          }
+
+          $tag = $env:REQUESTED_TAG
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            $tag = '(ingen eksplisitt tag)'
+          }
+
+          $repositoryUrl = "https://github.com/$($env:REPOSITORY)"
+          $runUrl = "$repositoryUrl/actions/runs/$($env:RUN_ID)"
+          $commitUrl = "$repositoryUrl/commit/$($env:SHA)"
+          $currentTag = if ($tag -like 'v*') { $tag } else { '' }
+          $tagsAtCandidate = @(git tag --points-at $env:SHA --list 'v*')
+          $describeTarget = if ($currentTag -and $tagsAtCandidate -contains $currentTag) { "$($env:SHA)^" } else { $env:SHA }
+          $previousTag = [string](git describe --tags --match 'v*' --abbrev=0 $describeTarget 2>$null)
+          if ($LASTEXITCODE -ne 0) {
+            $previousTag = ''
+          }
+          $range = if ($previousTag) { "$previousTag..$($env:SHA)" } else { $env:SHA }
+          $compareUrl = if ($previousTag) { "$repositoryUrl/compare/$previousTag...$($env:SHA)" } else { $commitUrl }
+          $changesLabel = if ($previousTag) { "Endringer siden $previousTag" } else { 'Kandidat-commit' }
+
+          $commitLines = @(git log $range --max-count=20 --format='%H%x09%h%x09%s' | ForEach-Object {
+              $parts = $_ -split "`t", 3
+              if ($parts.Count -eq 3) {
+                  "- [$($parts[1])]($repositoryUrl/commit/$($parts[0])) $($parts[2])"
+              }
+          })
+          if ($commitLines.Count -eq 0) {
+            $commitLines = @('- Ingen commits funnet for sammenligningen.')
+          }
+
+          $fileLines = if ($previousTag) {
+            @(git diff --name-only "$previousTag..$($env:SHA)" | Select-Object -First 30 | ForEach-Object { "- ``$_``" })
+          }
+          else {
+            @('- Åpne kandidat-commit for å kontrollere endrede filer.')
+          }
+          if ($fileLines.Count -eq 0) {
+            $fileLines = @('- Ingen endrede filer funnet.')
+          }
+
+          $approvalPath = Join-Path $env:GITHUB_WORKSPACE '.release-approval.md'
+          @(
+            '# Beslutning om produksjonspublisering'
+            ''
+            '| Felt | Kandidat |'
+            '|---|---|'
+            "| Repository | ``$($env:REPOSITORY)`` |"
+            "| Versjon | ``$version`` |"
+            "| Tag | ``$tag`` |"
+            "| Ref | ``$($env:REF_NAME)`` |"
+            "| Commit | [$($env:SHA.Substring(0, 12))]($commitUrl) |"
+            "| Utløser | ``$($env:EVENT_NAME)`` av ``$($env:ACTOR)`` |"
+            "| Workflow | [Åpne kjøring]($runUrl) |"
+            ''
+            '## Hva godkjenningen tillater'
+            ''
+            'Godkjenning starter produktets release-workflow. Den kan pakke og signere binærfiler, laste opp release-filer og oppdateringsmanifest til produksjons-FTP, forberede en pull request for nettsiden og opprette en GitHub Release ved tag-kjøringer.'
+            ''
+            '## Lenker for kontroll'
+            ''
+            "- [$changesLabel]($compareUrl)"
+            "- [Eksakt kandidat-commit]($commitUrl)"
+            "- [Build- og quality-kjøring]($runUrl)"
+            ''
+            '## Commits (maksimum 20)'
+            ''
+            $commitLines
+            ''
+            '## Endrede filer (maksimum 30)'
+            ''
+            $fileLines
+            ''
+            '## Sjekkliste før beslutning'
+            ''
+            '- [ ] Versjon og tag identifiserer riktig release.'
+            '- [ ] Kandidat-commit og endringene er forstått.'
+            '- [ ] Build- og quality-jobbene er grønne.'
+            '- [ ] Brukerrettet release-informasjon er klar for gjennomgang.'
+            '- [ ] Publisering til produksjons-FTP skal skje nå.'
+            ''
+            '## Beslutning'
+            ''
+            '- Kommenter kun **`ja`** eller **`yes`** for å godkjenne og fortsette.'
+            '- Kommenter kun **`nei`** eller **`no`** for å avvise og stoppe.'
+          ) | Out-File -LiteralPath $approvalPath -Encoding utf8
+
+          "path=$approvalPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "title=Publiseringsgodkjenning: $($env:REPOSITORY) $version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
       - name: Await manual approval
         uses: trstringer/manual-approval@v1.13.1
         with:
           secret: ${{ github.TOKEN }}
           approvers: HarrySolsem
           minimum-approvals: 1
-          issue-title: "Release approval required"
-          issue-body: "Approve release notes and deployment."
+          issue-title: ${{ steps.approval-context.outputs.title }}
+          issue-body-file-path: ${{ steps.approval-context.outputs.path }}
+          additional-approved-words: ja,godkjenn,godkjent
+          additional-denied-words: nei,avvis,avvist
