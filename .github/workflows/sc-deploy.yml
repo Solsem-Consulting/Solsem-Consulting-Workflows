@@ -13,6 +13,21 @@ on:
         required: false
         default: ""
         type: string
+      skip_ftp:
+        description: "Skip FTPS upload"
+        required: false
+        default: false
+        type: boolean
+      skip_website:
+        description: "Skip website update"
+        required: false
+        default: false
+        type: boolean
+      dry_run:
+        description: "Plan deployment without external writes"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   cvsmia:
@@ -21,6 +36,9 @@ jobs:
     with:
       tag: ${{ inputs.tag }}
       version: ${{ inputs.version }}
+      skipFtp: ${{ inputs.skip_ftp }}
+      skipWebsite: ${{ inputs.skip_website }}
+      dryRun: ${{ inputs.dry_run }}
     secrets: inherit
 
   karemo:
