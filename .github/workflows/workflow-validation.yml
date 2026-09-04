@@ -1,0 +1,28 @@
+name: Workflow validation
+
+on:
+  pull_request:
+    paths:
+      - ".github/**"
+      - "scripts/**"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/**"
+      - "scripts/**"
+
+permissions:
+  contents: read
+
+jobs:
+  validate-workflows:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Validate workflows and regression fixtures
+        uses: ./.github/actions/validate-workflows
+        with:
+          run-fixtures: "true"

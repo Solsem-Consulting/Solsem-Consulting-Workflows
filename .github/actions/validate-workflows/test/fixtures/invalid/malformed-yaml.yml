@@ -1,0 +1,4 @@
+name: Malformed YAML
+on:
+  workflow_dispatch:
+jobs: [

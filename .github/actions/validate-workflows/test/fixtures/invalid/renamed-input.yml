@@ -1,0 +1,8 @@
+name: Renamed input
+on:
+  workflow_dispatch:
+jobs:
+  call:
+    uses: ./.github/workflows/required-input.yml
+    with:
+      solution_path: Product.slnx

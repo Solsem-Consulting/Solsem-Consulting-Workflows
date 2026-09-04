@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    reviewers:
+      - HarrySolsem
+    labels:
+      - area:ci-cd
+  - package-ecosystem: npm
+    directory: "/.github/actions/validate-workflows"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    reviewers:
+      - HarrySolsem
+    labels:
+      - area:ci-cd

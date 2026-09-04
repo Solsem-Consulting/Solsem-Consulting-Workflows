@@ -1,0 +1,11 @@
+name: Malformed Bash
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - shell: bash
+        run: |
+          if true; then
+            echo "missing fi"
