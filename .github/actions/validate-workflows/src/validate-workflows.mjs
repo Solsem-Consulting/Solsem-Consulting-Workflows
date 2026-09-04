@@ -106,9 +106,9 @@ function validateScript(script, shell, label) {
     ? spawnSync(
         "pwsh",
         ["-NoLogo", "-NoProfile", "-NonInteractive", "-Command", "$code = [Console]::In.ReadToEnd(); [void][scriptblock]::Create($code)"],
-        { input: normalized, encoding: "utf8" },
+        { input: normalized, encoding: "utf8", timeout: 15_000 },
       )
-    : spawnSync("bash", ["-n"], { input: normalized, encoding: "utf8" });
+    : spawnSync("bash", ["-n"], { input: normalized, encoding: "utf8", timeout: 15_000 });
 
   if (result.error) {
     throw new Error(`${label}: could not start ${shell}: ${result.error.message}`);
