@@ -1,0 +1,22 @@
+name: Karemo caller fixture
+on:
+  workflow_dispatch:
+jobs:
+  core:
+    uses: ./.github/workflows/sc-core.yml
+    with:
+      solution: src/SetecAstronomy/Karemo.slnx
+  build:
+    uses: ./.github/workflows/SC-Build.yml
+    with:
+      build_target: src/SetecAstronomy/Karemo.slnx
+    secrets: inherit
+  quality:
+    uses: ./.github/workflows/SC-Quality.yml
+    with:
+      test_projects: '["Karemo.Application.Tests.csproj"]'
+    secrets: inherit
+  approval:
+    uses: ./.github/workflows/SC-Approval.yml
+  post:
+    uses: ./.github/workflows/sc-post.yml

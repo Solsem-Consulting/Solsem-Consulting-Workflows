@@ -27,3 +27,5 @@ Begge private produktrepo må ha Actions access satt til organisasjonen slik at 
 Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions ukentlig og oppretter review-forespørsel ved oppdateringer.
 
 Produktrepoene peker på én eksplisitt, gjennomgått commit i dette repoet. Promotering av en ny shared-workflow-versjon gjøres ved å oppdatere alle shared-workflow-referansene i hvert produktrepo til samme nye SHA i en reviewet pull request.
+
+`workflow-validation.yml` kjører Actionlint med ShellCheck, validerer syntaksen i embedded PowerShell og Bash, og kontrollerer caller-inputs og secrets mot `workflow_call`-kontraktene. Representative Karemo- og CVSmia-fixtures samt negative regresjons-fixtures ligger sammen med validator-actionen.
