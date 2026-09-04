@@ -1,0 +1,29 @@
+name: CVSmia caller fixture
+on:
+  workflow_dispatch:
+jobs:
+  core:
+    uses: ./.github/workflows/sc-core.yml
+    with:
+      solution: src/CVSmia.slnx
+  build:
+    uses: ./.github/workflows/SC-Build.yml
+    with:
+      build_target: src/CVSmia.slnx
+      nuget_config: NuGet.config
+    secrets: inherit
+  quality:
+    uses: ./.github/workflows/SC-Quality.yml
+    with:
+      test_projects: '["CVSmia.App.Tests.csproj"]'
+      nuget_config: NuGet.config
+    secrets: inherit
+  approval:
+    uses: ./.github/workflows/SC-Approval.yml
+    with:
+      release_tag: v0.0.0-test
+      release_version: 0.0.0-test
+  post:
+    uses: ./.github/workflows/sc-post.yml
+    with:
+      create_github_release: false

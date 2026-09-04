@@ -1,0 +1,56 @@
+name: Validate GitHub workflows
+description: Validate workflow syntax, embedded shell blocks, and reusable workflow contracts
+
+inputs:
+  product:
+    description: Product caller contract to validate (none, karemo, or cvsmia)
+    required: false
+    default: none
+  run-fixtures:
+    description: Run validator regression fixtures
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Install validator dependencies
+      shell: bash
+      run: npm ci --ignore-scripts --prefix "$GITHUB_ACTION_PATH"
+
+    - name: Install verified actionlint
+      shell: bash
+      env:
+        ACTIONLINT_VERSION: 1.7.12
+        ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+      run: |
+        set -euo pipefail
+        archive="$RUNNER_TEMP/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+        url="https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+        curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error --output "$archive" "$url"
+        echo "${ACTIONLINT_SHA256}  ${archive}" | sha256sum --check --strict
+        tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+
+    - name: Run actionlint and ShellCheck
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        set -euo pipefail
+        shellcheck_path="$(command -v shellcheck)"
+        "$RUNNER_TEMP/actionlint" -shellcheck "$shellcheck_path"
+
+    - name: Validate contracts and embedded shells
+      shell: bash
+      env:
+        PRODUCT: ${{ inputs.product }}
+      run: |
+        set -euo pipefail
+        node "$GITHUB_ACTION_PATH/src/validate-workflows.mjs" \
+          --repository-root "$GITHUB_WORKSPACE" \
+          --shared-root "$(cd "$GITHUB_ACTION_PATH/../../.." && pwd)" \
+          --product "$PRODUCT"
+
+    - name: Run regression fixtures
+      if: ${{ inputs.run-fixtures == 'true' }}
+      shell: bash
+      run: npm test --prefix "$GITHUB_ACTION_PATH"
