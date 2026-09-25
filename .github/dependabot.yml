@@ -5,8 +5,6 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
-    reviewers:
-      - HarrySolsem
     labels:
       - area:ci-cd
   - package-ecosystem: npm
@@ -14,7 +12,5 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    reviewers:
-      - HarrySolsem
     labels:
       - area:ci-cd

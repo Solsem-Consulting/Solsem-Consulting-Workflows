@@ -17,6 +17,13 @@ on:
         required: false
         default: "10.0.x"
         type: string
+    secrets:
+      NUGET_AUTH_TOKEN:
+        description: "Optional token for authenticated NuGet feeds"
+        required: false
+      GH_PACKAGES_READ_TOKEN:
+        description: "Optional token with read:packages, used when NUGET_AUTH_TOKEN is not set"
+        required: false
 
 permissions:
   contents: read
@@ -34,6 +41,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6

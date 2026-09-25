@@ -6,6 +6,7 @@ import {
   loadWorkflow,
   validateCall,
   validateCallerFile,
+  validateCallerJobs,
   validateEmbeddedShells,
 } from "../src/validate-workflows.mjs";
 
@@ -19,6 +20,23 @@ test("representative Karemo caller matches shared contracts", () => {
 
 test("representative CVSmia caller matches shared contracts", () => {
   validateCallerFile(resolve(fixtures, "callers", "cvsmia.yml"), sharedRoot, sharedRoot);
+});
+
+test("shared build and quality accept explicitly passed package tokens", () => {
+  validateCallerFile(resolve(fixtures, "callers", "explicit-secrets.yml"), sharedRoot, sharedRoot);
+});
+
+// Built inline: a mutable reference in a YAML fixture would trip the workflow pin policy.
+test("rejects shared workflow reference that is not pinned to a commit SHA", () => {
+  const caller = {
+    jobs: {
+      build: {
+        uses: "Solsem-Consulting/Solsem-Consulting-Workflows/.github/workflows/SC-Build.yml@main",
+        with: { build_target: "src/Product.slnx" },
+      },
+    },
+  };
+  assert.throws(() => validateCallerJobs(caller, "mutable-ref", sharedRoot, sharedRoot), /pinned to a full commit SHA/);
 });
 
 test("rejects reusable workflow without workflow_call", () => {
@@ -46,6 +64,11 @@ test("rejects malformed embedded PowerShell", () => {
 test("rejects malformed embedded Bash", () => {
   const workflow = loadWorkflow(resolve(fixtures, "invalid", "malformed-bash.yml"));
   assert.throws(() => validateEmbeddedShells(workflow, "malformed-bash"), /invalid embedded bash/);
+});
+
+test("skips shells without a syntax checker", () => {
+  const workflow = loadWorkflow(resolve(fixtures, "valid", "unvalidated-shells.yml"));
+  validateEmbeddedShells(workflow, "unvalidated-shells");
 });
 
 test("rejects malformed workflow YAML", () => {

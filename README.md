@@ -20,12 +20,12 @@ Produktspesifikke deploy-kontrakter:
 
 Det finnes med hensikt ingen felles deployment-router. Dermed trenger ikke Karemo å laste eller validere CVSmias deployment-workflow, og CVSmia trenger ikke å laste eller validere Karemo sin. Produktets deployment-workflow skal bare eksponere `workflow_call`; alle eksterne release-triggere eies av produktets `publish.yml`.
 
-Begge private produktrepo må ha Actions access satt til organisasjonen slik at de felles build-, quality-, approval- og post-workflowene kan lastes. Secrets må sendes eksplisitt eller med `secrets: inherit` i hvert hopp. `GITHUB_TOKEN`-permissions kan bare beholdes eller reduseres gjennom kjeden, derfor deklareres nødvendige write-permissions i produktets inngangsworkflow.
+Begge private produktrepo må ha Actions access satt til organisasjonen slik at de felles build-, quality-, approval- og post-workflowene kan lastes. Secrets må sendes eksplisitt eller med `secrets: inherit` i hvert hopp. `SC-Build.yml` og `SC-Quality.yml` deklarerer de valgfrie secretene `NUGET_AUTH_TOKEN` og `GH_PACKAGES_READ_TOKEN`; uten dem brukes `github.token` mot pakkefeeden. `GITHUB_TOKEN`-permissions kan bare beholdes eller reduseres gjennom kjeden, derfor deklareres nødvendige write-permissions i produktets inngangsworkflow.
 
 ## Workflow-avhengigheter
 
-Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions ukentlig og oppretter review-forespørsel ved oppdateringer.
+Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions og validator-avhengighetene ukentlig. Review-forespørsler styres av `.github/CODEOWNERS`, siden Dependabot ikke lenger støtter `reviewers` i `dependabot.yml`.
 
 Produktrepoene peker på én eksplisitt, gjennomgått commit i dette repoet. Promotering av en ny shared-workflow-versjon gjøres ved å oppdatere alle shared-workflow-referansene i hvert produktrepo til samme nye SHA i en reviewet pull request.
 
-`workflow-validation.yml` kjører Actionlint med ShellCheck, validerer syntaksen i embedded PowerShell og Bash, og kontrollerer caller-inputs og secrets mot `workflow_call`-kontraktene. Representative Karemo- og CVSmia-fixtures samt negative regresjons-fixtures ligger sammen med validator-actionen.
+`workflow-validation.yml` kjører Actionlint med ShellCheck, validerer syntaksen i embedded PowerShell og Bash, og kontrollerer caller-inputs og secrets mot `workflow_call`-kontraktene. Referanser til dette repoets workflows som ikke er pinnet til full commit-SHA avvises. Steg med shells uten syntakssjekk (for eksempel `python` og `cmd`) hoppes over. Representative Karemo- og CVSmia-fixtures samt negative regresjons-fixtures ligger sammen med validator-actionen.
