@@ -24,6 +24,18 @@ Begge private produktrepo må ha Actions access satt til organisasjonen slik at 
 
 Alle jobber har `timeout-minutes`. `SC-Build.yml` og `SC-Quality.yml` har 60 minutter som standard, og `SC-Approval.yml` venter maksimalt 60 minutter på godkjenning, siden runneren holdes og belastes mens den venter. Alle tre kan overstyres med input `timeout_minutes`. `sc-core.yml` og `sc-post.yml` har faste 10 minutter.
 
+`SC-Approval.yml` konfigureres med disse valgfrie inputene:
+
+| Input | Standard | Beskrivelse |
+|---|---|---|
+| `approvers` | `HarrySolsem` | Kommaseparerte GitHub-brukere eller organisasjonsteam som kan godkjenne |
+| `minimum_approvals` | `1` | Antall godkjenninger som kreves |
+| `version_file` | tom | Tekstfil med versjonsnummer, brukes når versjon ikke er oppgitt |
+| `release_tag` / `release_version` | tom | Overstyrer tag og versjon fra utløseren |
+| `timeout_minutes` | `60` | Maksimal ventetid på godkjenning |
+
+Versjonen hentes i denne rekkefølgen: `release_version`, `workflow_dispatch`-input `version`, `version_file`, `Version` i `Directory.Build.props` på rotnivå. CVSmia har versjonen i `src/cvsmia/VERSION` og må derfor sende `version_file: src/cvsmia/VERSION`.
+
 ## Workflow-avhengigheter
 
 Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions og validator-avhengighetene ukentlig. Review-forespørsler styres av `.github/CODEOWNERS`, siden Dependabot ikke lenger støtter `reviewers` i `dependabot.yml`.

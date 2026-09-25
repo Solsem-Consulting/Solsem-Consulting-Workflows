@@ -23,6 +23,7 @@ jobs:
     with:
       release_tag: v0.0.0-test
       release_version: 0.0.0-test
+      version_file: src/cvsmia/VERSION
   post:
     uses: ./.github/workflows/sc-post.yml
     with:
