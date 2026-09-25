@@ -4,7 +4,8 @@ import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { parseDocument } from "yaml";
 
-const sharedWorkflowPattern = /^Solsem-Consulting\/Solsem-Consulting-Workflows\/\.github\/workflows\/(?<file>[^@]+\.ya?ml)@[0-9a-fA-F]{40}$/;
+const sharedRepositoryPrefix = /^Solsem-Consulting\/Solsem-Consulting-Workflows\//i;
+const sharedWorkflowPattern = /^Solsem-Consulting\/Solsem-Consulting-Workflows\/\.github\/workflows\/(?<file>[^@]+\.ya?ml)@[0-9a-fA-F]{40}$/i;
 const localWorkflowPattern = /^\.\/\.github\/workflows\/(?<file>.+\.ya?ml)$/;
 
 export function loadWorkflow(path) {
@@ -65,6 +66,9 @@ function resolveContract(uses, repositoryRoot, sharedRoot) {
   if (sharedMatch) {
     return resolve(sharedRoot, ".github", "workflows", sharedMatch.groups.file);
   }
+  if (sharedRepositoryPrefix.test(uses)) {
+    throw new Error(`shared workflow reference must be a .github/workflows file pinned to a full commit SHA: ${uses}`);
+  }
 
   const localMatch = uses.match(localWorkflowPattern);
   if (!localMatch) {
@@ -78,21 +82,44 @@ function resolveContract(uses, repositoryRoot, sharedRoot) {
   return existsSync(sharedPath) ? sharedPath : localPath;
 }
 
-export function validateCallerFile(callerPath, repositoryRoot, sharedRoot) {
-  const caller = loadWorkflow(callerPath);
+export function validateCallerJobs(caller, label, repositoryRoot, sharedRoot) {
   for (const [jobName, job] of Object.entries(caller.jobs ?? {})) {
     if (!job || typeof job !== "object" || typeof job.uses !== "string") {
       continue;
     }
-    const contractPath = resolveContract(job.uses, repositoryRoot, sharedRoot);
+    let contractPath;
+    try {
+      contractPath = resolveContract(job.uses, repositoryRoot, sharedRoot);
+    } catch (error) {
+      throw new Error(`${label}:${jobName}: ${error.message}`);
+    }
     if (!contractPath) {
       continue;
     }
     if (!existsSync(contractPath)) {
-      throw new Error(`${callerPath}:${jobName}: referenced workflow not found: ${contractPath}`);
+      throw new Error(`${label}:${jobName}: referenced workflow not found: ${contractPath}`);
     }
-    validateCall(job, loadWorkflow(contractPath), `${callerPath}:${jobName}`);
+    validateCall(job, loadWorkflow(contractPath), `${label}:${jobName}`);
   }
+}
+
+export function validateCallerFile(callerPath, repositoryRoot, sharedRoot) {
+  validateCallerJobs(loadWorkflow(callerPath), callerPath, repositoryRoot, sharedRoot);
+}
+
+// Returns the syntax checker for a step shell, or null for shells that cannot be checked (python, cmd, custom).
+function syntaxShell(configuredShell, runner) {
+  if (!configuredShell) {
+    return runner.includes("windows") ? "pwsh" : "bash";
+  }
+  const executable = configuredShell.trim().split(/\s+/)[0].split(/[\\/]/).pop();
+  if (executable === "pwsh" || executable === "powershell") {
+    return "pwsh";
+  }
+  if (executable === "bash" || executable === "sh") {
+    return "bash";
+  }
+  return null;
 }
 
 function normalizedScript(script, shell) {
@@ -132,10 +159,10 @@ export function validateEmbeddedShells(workflow, label) {
         continue;
       }
       const configuredShell = String(step.shell ?? jobDefault ?? workflowDefault ?? "").toLowerCase();
-      const shell = configuredShell.includes("pwsh") || configuredShell.includes("powershell") || (!configuredShell && runner.includes("windows"))
-        ? "pwsh"
-        : "bash";
-      validateScript(step.run, shell, `${label}:${jobName}:step-${index + 1}`);
+      const shell = syntaxShell(configuredShell, runner);
+      if (shell) {
+        validateScript(step.run, shell, `${label}:${jobName}:step-${index + 1}`);
+      }
     }
   }
 }

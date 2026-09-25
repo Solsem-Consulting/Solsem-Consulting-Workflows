@@ -1,0 +1,13 @@
+name: Unvalidated shells
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - shell: python
+        run: |
+          print("not bash")
+      - shell: cmd
+        run: |
+          if exist build.log (type build.log)

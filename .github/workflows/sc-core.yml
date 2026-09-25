@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Validate repository contract
         shell: pwsh
@@ -45,8 +47,8 @@ jobs:
           @(
             '## Shared preflight'
             ''
-            "- Repository: ``${{ github.repository }}``"
-            "- Ref: ``${{ github.ref }}``"
+            "- Repository: ``$env:GITHUB_REPOSITORY``"
+            "- Ref: ``$env:GITHUB_REF``"
             "- Solution: ``$env:SOLUTION``"
             '- Status: passed'
           ) -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

@@ -22,8 +22,8 @@ jobs:
           {
             echo "## Shared release pipeline"
             echo
-            echo "- Repository: \`${{ github.repository }}\`"
-            echo "- Ref: \`${{ github.ref }}\`"
+            echo "- Repository: \`${GITHUB_REPOSITORY}\`"
+            echo "- Ref: \`${GITHUB_REF}\`"
             echo "- Status: completed"
           } >> "$GITHUB_STEP_SUMMARY"
 
