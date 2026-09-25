@@ -17,6 +17,11 @@ on:
         required: false
         default: "10.0.x"
         type: string
+      timeout_minutes:
+        description: "Maximum minutes for the build job"
+        required: false
+        default: 60
+        type: number
     secrets:
       NUGET_AUTH_TOKEN:
         description: "Optional token for authenticated NuGet feeds"
@@ -32,6 +37,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     env:
       GITHUB_ACTOR: ${{ github.actor }}
       NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN || secrets.GH_PACKAGES_READ_TOKEN || github.token }}

@@ -13,6 +13,11 @@ on:
         required: false
         default: ""
         type: string
+      timeout_minutes:
+        description: "Maximum minutes to wait for approval; the runner is held while waiting"
+        required: false
+        default: 60
+        type: number
 
 permissions:
   contents: read
@@ -21,6 +26,7 @@ permissions:
 jobs:
   approval:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout_minutes }}
     steps:
       - name: Checkout release candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
