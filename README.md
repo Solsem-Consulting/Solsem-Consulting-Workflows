@@ -22,6 +22,8 @@ Det finnes med hensikt ingen felles deployment-router. Dermed trenger ikke Karem
 
 Begge private produktrepo må ha Actions access satt til organisasjonen slik at de felles build-, quality-, approval- og post-workflowene kan lastes. Secrets må sendes eksplisitt eller med `secrets: inherit` i hvert hopp. `SC-Build.yml` og `SC-Quality.yml` deklarerer de valgfrie secretene `NUGET_AUTH_TOKEN` og `GH_PACKAGES_READ_TOKEN`; uten dem brukes `github.token` mot pakkefeeden. `GITHUB_TOKEN`-permissions kan bare beholdes eller reduseres gjennom kjeden, derfor deklareres nødvendige write-permissions i produktets inngangsworkflow.
 
+Alle jobber har `timeout-minutes`. `SC-Build.yml` og `SC-Quality.yml` har 60 minutter som standard, og `SC-Approval.yml` venter maksimalt 60 minutter på godkjenning, siden runneren holdes og belastes mens den venter. Alle tre kan overstyres med input `timeout_minutes`. `sc-core.yml` og `sc-post.yml` har faste 10 minutter.
+
 ## Workflow-avhengigheter
 
 Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions og validator-avhengighetene ukentlig. Review-forespørsler styres av `.github/CODEOWNERS`, siden Dependabot ikke lenger støtter `reviewers` i `dependabot.yml`.
