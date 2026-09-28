@@ -25,7 +25,19 @@ jobs:
       release_version: 0.0.0-test
       version_file: src/cvsmia/VERSION
       candidate_artifact: release-candidate
+  provenance:
+    uses: ./.github/workflows/SC-Provenance.yml
+    with:
+      release_artifact: signed-release
+      product_name: CVSmia
+      release_version: 0.0.0-test
+      release_tag: v0.0.0-test
+      candidate_digest: 0000000000000000000000000000000000000000000000000000000000000000
+      public_key: test-public-key
+    secrets: inherit
   post:
     uses: ./.github/workflows/sc-post.yml
     with:
       create_github_release: false
+      evidence_artifact: release-evidence
+      public_key: test-public-key

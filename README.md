@@ -12,7 +12,8 @@ Felles GitHub Actions-kontrakter for CVSmia og Karemo.
 6. `SC-Approval.yml` oppretter godkjenningssak før produksjonspublisering og viser SHA-256 for hver kandidatfil.
 7. Produktets `publish.yml` kaller produktets lokale reusable deployment-workflow direkte med det godkjente manifestet.
 8. Den lokale deployment-workflowen laster ned den godkjente kandidaten uten å bygge på nytt, verifiserer den og eier produktspesifikk signering, FTP-publisering og nettside-handoff.
-9. `sc-post.yml` skriver felles sluttrapport og oppretter GitHub Release for tag-kjøringer.
+9. `SC-Provenance.yml` lager SBOM, `SHA256SUMS` og signert provenance for de publiserte filene.
+10. `sc-post.yml` verifiserer det signerte release-beviset, skriver felles sluttrapport og oppretter GitHub Release for tag-kjøringer med beviset vedlagt.
 
 Produktspesifikke deploy-kontrakter:
 
@@ -72,6 +73,27 @@ Produktets `publish.yml` setter `concurrency` på hele release-kjøringen, med �
 En godkjenning gjelder én commit i én kjøring. Saken viser commit-SHA i tittelen og tabellen, `SC-Approval` returnerer `approved_sha`, og kandidaten bygges fra samme commit. For tag-kjøringer sjekker `SC-Approval` etter godkjenning at taggen fortsatt peker på den godkjente commiten. Er taggen flyttet mens godkjenningen ventet, stopper kjøringen, og den nye commiten må gjennom en egen kjøring med egen godkjenning. En godkjenningssak som tilhører en avbrutt eller utløpt kjøring (maksimalt `timeout_minutes`), kan ikke lenger godkjenne noe.
 
 Organisasjonen bruker GitHubs gratisplan. Der kan private repo ikke bruke miljøer (`environment`) med påkrevde godkjennere, secrets per miljø eller regler for hvilke tagger som kan publisere, og heller ikke rulesets for tagger. Produksjonssecrets ligger derfor som repository-secrets, og det er bare release-stegene som får dem. Hvis planen oppgraderes, bør secretene flyttes til et beskyttet `production`-miljø med tag-regel `v*`.
+
+## Signert release-bevis
+
+`SC-Provenance.yml` kjøres etter publisering med artefakten som inneholder nøyaktig de publiserte filene. Actionen `.github/actions/release-evidence` lager:
+
+| Fil | Innhold |
+|---|---|
+| `<produkt>-<versjon>.cdx.json` | CycloneDX-SBOM (Syft 1.52.0) av applikasjonen i release-arkivene (`sbom_archives`, standard `*.zip`) |
+| `SHA256SUMS` | SHA-256 av hver publisert fil og av SBOM-en |
+| `<produkt>-<versjon>.provenance.sigstore.json` | SLSA v1-provenance for `SHA256SUMS` med repository, ref, commit, workflow, kjøring og godkjent kandidat-digest, signert med cosign 3.1.3 |
+| `VERIFY.md` | Kommandoene for å verifisere releasen og fingeravtrykket til den offentlige nøkkelen |
+
+Signeringen bruker bare en privat nøkkel. Organisasjonens GitHub-plan gir ikke GitHub-attestasjoner i private repo, og nøkkelbasert signering sender ingenting til en offentlig transparenslogg eller tidsstempeltjeneste. Beviset verifiseres rett etter signering, og `sc-post.yml` verifiserer det på nytt som revisjonssteg (signatur, repository, commit, signerende workflow og hasher) før det legges ved GitHub-releasen. Artefakten `release-evidence` beholdes i 30 dager (`evidence_retention_days`).
+
+Oppsett, før produktene tar i bruk `SC-Provenance.yml`:
+
+1. Lag et nøkkelpar med et sterkt passord: `cosign generate-key-pair` (cosign 3.1 eller nyere).
+2. Legg inn repository-secrets `RELEASE_SIGNING_KEY` (innholdet i `cosign.key`) og `RELEASE_SIGNING_PASSWORD`, og repository-variabelen `RELEASE_SIGNING_PUBLIC_KEY` (innholdet i `cosign.pub`), i både `KaremoSuite` og `cvsmia`. På gratisplanen kan private repo ikke bruke organisasjons-secrets eller -variabler.
+3. Publiser `cosign.pub` og fingeravtrykket (`openssl pkey -pubin -in cosign.pub -outform DER | sha256sum`) et sted brukerne stoler på, for eksempel i produktets `SECURITY.md`. Oppbevar `cosign.key` og passordet utenfor GitHub i tillegg, slik at nøkkelen kan roteres.
+
+Mangler secretene eller variabelen, stopper publiseringen i produktenes preflight før noe lastes opp.
 
 ## Workflow-avhengigheter
 
