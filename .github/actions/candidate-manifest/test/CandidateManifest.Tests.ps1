@@ -6,7 +6,8 @@ function Assert-Throws {
     param([scriptblock]$Script, [string]$Pattern, [string]$Because)
 
     try {
-        & $Script
+        # Expected failures print ::error annotations; keep them out of a passing CI log.
+        & $Script 6>$null
     }
     catch {
         if ($_.Exception.Message -notmatch $Pattern) {
