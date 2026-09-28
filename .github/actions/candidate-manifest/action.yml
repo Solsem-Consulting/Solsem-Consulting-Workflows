@@ -1,0 +1,38 @@
+name: Release candidate manifest
+description: Hash every file in a release candidate directory and optionally require an exact match with an approved manifest
+
+inputs:
+  path:
+    description: Directory that holds the release candidate files
+    required: true
+  expected-manifest:
+    description: Approved manifest (sha256sum format); when set, the directory must contain exactly these files with these hashes
+    required: false
+    default: ""
+  expected-digest:
+    description: Optional SHA-256 of the approved manifest text, used to detect a manifest altered in transit; requires expected-manifest
+    required: false
+    default: ""
+
+outputs:
+  manifest:
+    description: Manifest in sha256sum format, one line per file, sorted by path
+    value: ${{ steps.manifest.outputs.manifest }}
+  digest:
+    description: SHA-256 of the manifest text
+    value: ${{ steps.manifest.outputs.digest }}
+  file-count:
+    description: Number of files in the candidate
+    value: ${{ steps.manifest.outputs.file-count }}
+
+runs:
+  using: composite
+  steps:
+    - name: Hash and verify release candidate
+      id: manifest
+      shell: pwsh
+      env:
+        CANDIDATE_PATH: ${{ inputs.path }}
+        EXPECTED_MANIFEST: ${{ inputs.expected-manifest }}
+        EXPECTED_DIGEST: ${{ inputs.expected-digest }}
+      run: '& (Join-Path $env:GITHUB_ACTION_PATH "CandidateManifest.ps1")'

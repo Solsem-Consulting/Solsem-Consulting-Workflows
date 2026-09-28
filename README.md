@@ -8,10 +8,11 @@ Felles GitHub Actions-kontrakter for CVSmia og Karemo.
 2. `sc-core.yml` validerer repository/solution-kontrakten.
 3. `SC-Build.yml` restorer og bygger løsningen med felles .NET-oppsett.
 4. `SC-Quality.yml` kjører produktets konfigurerte testprosjekter gjennom én felles testmotor.
-5. `SC-Approval.yml` oppretter godkjenningssak før produksjonspublisering.
-6. Produktets `publish.yml` kaller produktets lokale reusable deployment-workflow direkte.
-7. Den lokale deployment-workflowen eier produktspesifikk pakking, signering, FTP-publisering og nettside-handoff.
-8. `sc-post.yml` skriver felles sluttrapport og oppretter GitHub Release for tag-kjøringer.
+5. Produktets lokale kandidat-workflow bygger og pakker release-filene én gang og laster dem opp som artefakten `release-candidate`.
+6. `SC-Approval.yml` oppretter godkjenningssak før produksjonspublisering og viser SHA-256 for hver kandidatfil.
+7. Produktets `publish.yml` kaller produktets lokale reusable deployment-workflow direkte med det godkjente manifestet.
+8. Den lokale deployment-workflowen laster ned den godkjente kandidaten uten å bygge på nytt, verifiserer den og eier produktspesifikk signering, FTP-publisering og nettside-handoff.
+9. `sc-post.yml` skriver felles sluttrapport og oppretter GitHub Release for tag-kjøringer.
 
 Produktspesifikke deploy-kontrakter:
 
@@ -33,8 +34,21 @@ Alle jobber har `timeout-minutes`. `SC-Build.yml` og `SC-Quality.yml` har 60 min
 | `version_file` | tom | Tekstfil med versjonsnummer, brukes når versjon ikke er oppgitt |
 | `release_tag` / `release_version` | tom | Overstyrer tag og versjon fra utløseren |
 | `timeout_minutes` | `60` | Maksimal ventetid på godkjenning |
+| `candidate_artifact` | tom | Artefakt med release-kandidaten; filene hashes og vises i godkjenningssaken |
+
+`SC-Approval.yml` returnerer `approved_sha` (commiten godkjenningen gjelder), `candidate_manifest` (godkjent manifest i `sha256sum`-format) og `candidate_digest` (SHA-256 av manifestteksten). De to siste er tomme uten `candidate_artifact`.
 
 Versjonen hentes i denne rekkefølgen: `release_version`, `workflow_dispatch`-input `version`, `version_file`, `Version` i `Directory.Build.props` på rotnivå. CVSmia har versjonen i `src/cvsmia/VERSION` og må derfor sende `version_file: src/cvsmia/VERSION`.
+
+## Én godkjent kandidat per release
+
+Hver release-kjøring bygger, tester og pakker én kandidat før godkjenning. Deploy etter godkjenning laster ned den samme artefakten og bygger aldri på nytt.
+
+- Kandidaten lastes opp som artefakten `release-candidate` med `retention-days: 1`. Navnet er fast per kjøring, og artefakten skal bare inneholde filer som skal signeres eller publiseres.
+- Signert payload lastes opp som `signed-release` med `retention-days: 1`. Artefakter fra en kjøring gjenbrukes aldri i en annen kjøring; en utløpt kandidat krever en ny release-kjøring med ny godkjenning.
+- `.github/actions/candidate-manifest` lager manifestet: én linje `<sha256>  <relativ/sti>` per fil, sortert ordinalt på sti, med LF-linjeskift. `candidate_digest` er SHA-256 av denne teksten.
+- Deploy kaller `candidate-manifest` med `expected-manifest` og `expected-digest` rett etter nedlasting. Actionen feiler hvis en fil mangler, er endret eller er lagt til.
+- Signering skjer etter godkjenning. Signeringsjobben verifiserer kandidaten mot det godkjente manifestet før signering, lager et nytt manifest for de signerte filene og logger det. Publiseringsjobben verifiserer den signerte payloaden mot dette manifestet rett før opplasting. Filer som ikke endres av signering har dermed samme hash ved godkjenning og opplasting.
 
 ## Workflow-avhengigheter
 

@@ -33,6 +33,21 @@ on:
         required: false
         default: 60
         type: number
+      candidate_artifact:
+        description: "Optional workflow artifact holding the release candidate; its file hashes are shown to approvers and returned as outputs"
+        required: false
+        default: ""
+        type: string
+    outputs:
+      approved_sha:
+        description: "Commit SHA the approval applies to"
+        value: ${{ jobs.approval.outputs.approved_sha }}
+      candidate_manifest:
+        description: "Approved candidate manifest (sha256sum format); empty without candidate_artifact"
+        value: ${{ jobs.approval.outputs.candidate_manifest }}
+      candidate_digest:
+        description: "SHA-256 of the approved candidate manifest; empty without candidate_artifact"
+        value: ${{ jobs.approval.outputs.candidate_digest }}
 
 permissions:
   contents: read
@@ -42,12 +57,30 @@ jobs:
   approval:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ inputs.timeout_minutes }}
+    outputs:
+      approved_sha: ${{ github.sha }}
+      candidate_manifest: ${{ steps.candidate.outputs.manifest }}
+      candidate_digest: ${{ steps.candidate.outputs.digest }}
     steps:
       - name: Checkout release candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Download candidate artifact
+        if: ${{ inputs.candidate_artifact != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.candidate_artifact }}
+          path: ${{ runner.temp }}/release-candidate
+
+      - name: Hash candidate artifact
+        id: candidate
+        if: ${{ inputs.candidate_artifact != '' }}
+        uses: Solsem-Consulting/Solsem-Consulting-Workflows/.github/actions/candidate-manifest@7ee4279d05ee8e35ed7ca2c6a6b15ffe12dcd751 # candidate-manifest 2026-09-28
+        with:
+          path: ${{ runner.temp }}/release-candidate
 
       - name: Prepare approval context
         id: approval-context
@@ -64,6 +97,9 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
           EVENT_NAME: ${{ github.event_name }}
           ACTOR: ${{ github.actor }}
+          CANDIDATE_ARTIFACT: ${{ inputs.candidate_artifact }}
+          CANDIDATE_MANIFEST: ${{ steps.candidate.outputs.manifest }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:APPROVERS)) {
             throw "At least one approver is required."
@@ -134,6 +170,27 @@ jobs:
             $fileLines = @('- Ingen endrede filer funnet.')
           }
 
+          if ([string]::IsNullOrWhiteSpace($env:CANDIDATE_ARTIFACT)) {
+            $candidateRow = '| Kandidatartefakt | ikke oppgitt; godkjenningen binder ingen filer |'
+            $candidateLines = @()
+            $candidateChecks = @()
+          }
+          else {
+            $candidateEntries = @($env:CANDIDATE_MANIFEST -split "`n" | Where-Object { $_ })
+            $candidateRow = "| Kandidatartefakt | ``$($env:CANDIDATE_ARTIFACT)``: $($candidateEntries.Count) filer, manifest-SHA-256 ``$($env:CANDIDATE_DIGEST)`` |"
+            $candidateLines = @(
+              '## Kandidatfiler som godkjennes'
+              ''
+              'Deploy-workflowen publiserer disse filene uten å bygge på nytt, og stopper hvis en fil mangler, er endret eller er lagt til før signering og opplasting.'
+              ''
+              '| Fil | SHA-256 |'
+              '|---|---|'
+              $candidateEntries | ForEach-Object { "| ``$($_.Substring(66))`` | ``$($_.Substring(0, 64))`` |" }
+              ''
+            )
+            $candidateChecks = @('- [ ] Kandidatfilene og hashene hører til denne releasen.')
+          }
+
           $approvalPath = Join-Path $env:GITHUB_WORKSPACE '.release-approval.md'
           @(
             '# Beslutning om produksjonspublisering'
@@ -148,6 +205,7 @@ jobs:
             "| Utløser | ``$($env:EVENT_NAME)`` av ``$($env:ACTOR)`` |"
             "| Workflow | [Åpne kjøring]($runUrl) |"
             "| Godkjennere | ``$($env:APPROVERS)`` (minst $($env:MINIMUM_APPROVALS)) |"
+            $candidateRow
             ''
             '## Hva godkjenningen tillater'
             ''
@@ -159,6 +217,7 @@ jobs:
             "- [Eksakt kandidat-commit]($commitUrl)"
             "- [Build- og quality-kjøring]($runUrl)"
             ''
+            $candidateLines
             '## Commits (maksimum 20)'
             ''
             $commitLines
@@ -171,6 +230,7 @@ jobs:
             ''
             '- [ ] Versjon og tag identifiserer riktig release.'
             '- [ ] Kandidat-commit og endringene er forstått.'
+            $candidateChecks
             '- [ ] Build- og quality-jobbene er grønne.'
             '- [ ] Brukerrettet release-informasjon er klar for gjennomgang.'
             '- [ ] Publisering til produksjons-FTP skal skje nå.'

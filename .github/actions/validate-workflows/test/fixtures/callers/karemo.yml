@@ -18,5 +18,7 @@ jobs:
     secrets: inherit
   approval:
     uses: ./.github/workflows/SC-Approval.yml
+    with:
+      candidate_artifact: release-candidate
   post:
     uses: ./.github/workflows/sc-post.yml
