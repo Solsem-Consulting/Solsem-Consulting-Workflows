@@ -8,6 +8,16 @@ on:
         required: false
         default: true
         type: boolean
+      evidence_artifact:
+        description: "Optional release evidence artifact from SC-Provenance; it is verified and attached to the GitHub Release"
+        required: false
+        default: ""
+        type: string
+      public_key:
+        description: "Release signing public key (PEM); required with evidence_artifact"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -28,6 +38,24 @@ jobs:
             echo "- Status: completed"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Download release evidence
+        if: ${{ inputs.evidence_artifact != '' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.evidence_artifact }}
+          path: ${{ runner.temp }}/evidence
+
+      # Release audit: the evidence must verify against the release signing key, this
+      # repository and commit, and this run's workflow before it is published.
+      - name: Verify release evidence
+        if: ${{ inputs.evidence_artifact != '' }}
+        uses: Solsem-Consulting/Solsem-Consulting-Workflows/.github/actions/release-evidence@f54ee5c18a4ba765b8273f2a57eda9f2ab113c8c # release-evidence 2026-09-28
+        with:
+          mode: verify
+          evidence-path: ${{ runner.temp }}/evidence
+          public-key: ${{ inputs.public_key }}
+          expected-workflow-ref: ${{ github.workflow_ref }}
+
       - name: Create GitHub Release
         if: ${{ inputs.create_github_release && startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
@@ -35,3 +63,5 @@ jobs:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
           make_latest: true
+          files: ${{ inputs.evidence_artifact != '' && format('{0}/evidence/*', runner.temp) || '' }}
+          fail_on_unmatched_files: ${{ inputs.evidence_artifact != '' }}
