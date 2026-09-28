@@ -29,3 +29,11 @@ jobs:
         uses: ./.github/actions/validate-workflows
         with:
           run-fixtures: "true"
+
+      - name: Test shared release actions
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path .github/actions -Filter '*.Tests.ps1' -Recurse -File | ForEach-Object {
+            Write-Host "Running $($_.FullName)"
+            & $_.FullName
+          }
