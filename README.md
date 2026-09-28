@@ -50,6 +50,17 @@ Hver release-kjøring bygger, tester og pakker én kandidat før godkjenning. De
 - Deploy kaller `candidate-manifest` med `expected-manifest` og `expected-digest` rett etter nedlasting. Actionen feiler hvis en fil mangler, er endret eller er lagt til.
 - Signering skjer etter godkjenning. Signeringsjobben verifiserer kandidaten mot det godkjente manifestet før signering, lager et nytt manifest for de signerte filene og logger det. Publiseringsjobben verifiserer den signerte payloaden mot dette manifestet rett før opplasting. Filer som ikke endres av signering har dermed samme hash ved godkjenning og opplasting.
 
+## Atomisk FTP-publisering
+
+Produktene eier sin egen FTP-publisering (`scripts/publish-ftp-release.sh` i Karemo og `tools/Upload-Ftps.ps1` i CVSmia), men følger samme kontrakt, slik at klienter aldri ser en delvis fil eller et manifest for en ufullstendig release:
+
+1. Hver fil lastes opp som `<navn>.partial-<kjøring>` i den endelige mappen.
+2. Den midlertidige filen kontrolleres på størrelse (`SIZE`) og på SHA-256 når serveren støtter `HASH` eller `XSHA256`. Uten slik støtte kontrolleres bare størrelsen, og loggen sier det.
+3. Filen får sitt endelige navn med `RNFR`/`RNTO` i samme mappe og kontrolleres på nytt. Hvis serveren ikke kan gi nytt navn over en eksisterende fil, slettes den gamle først, og kjøringen viser en advarsel.
+4. Et mislykket forsøk sletter den midlertidige filen og endrer aldri et endelig navn. Avbrutte, stillestående (under 1 KiB/s i 60 sekunder) og avvikende overføringer prøves opptil tre ganger.
+5. Det signerte oppdateringsmanifestet publiseres sist, og bare når alle pakkene er publisert og kontrollert.
+6. Diagnostikk viser curl-exitkode og FTP-serverens svar, aldri klientkommandoer eller passord.
+
 ## Workflow-avhengigheter
 
 Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions og validator-avhengighetene ukentlig. Review-forespørsler styres av `.github/CODEOWNERS`, siden Dependabot ikke lenger støtter `reviewers` i `dependabot.yml`.
