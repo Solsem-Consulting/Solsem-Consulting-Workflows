@@ -37,3 +37,8 @@ jobs:
             Write-Host "Running $($_.FullName)"
             & $_.FullName
           }
+          Get-ChildItem -Path .github/actions -Filter '*.test.sh' -Recurse -File | ForEach-Object {
+            Write-Host "Running $($_.FullName)"
+            bash $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "$($_.Name) failed." }
+          }
