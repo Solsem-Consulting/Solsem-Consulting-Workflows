@@ -61,6 +61,18 @@ Produktene eier sin egen FTP-publisering (`scripts/publish-ftp-release.sh` i Kar
 5. Det signerte oppdateringsmanifestet publiseres sist, og bare når alle pakkene er publisert og kontrollert.
 6. Diagnostikk viser curl-exitkode og FTP-serverens svar, aldri klientkommandoer eller passord.
 
+## Én produksjonsrelease om gangen
+
+Produktets `publish.yml` setter `concurrency` på hele release-kjøringen, med én gruppe per produkt og `cancel-in-progress: false`:
+
+- En release som kjører (bygging, godkjenning, signering, FTP-publisering, nettside-PR), avbrytes aldri av en ny kjøring.
+- En ny kjøring venter til den forrige er ferdig. Venter flere, beholder GitHub bare den nyeste ventende kjøringen og avbryter eldre ventende kjøringer. Kjøringene starter dermed i rekkefølge, og to publiseringer overlapper aldri.
+- CVSmia legger tørrkjøringer (`dryRun`) i en egen gruppe, slik at de ikke venter på eller blokkerer produksjonsreleaser.
+
+En godkjenning gjelder én commit i én kjøring. Saken viser commit-SHA i tittelen og tabellen, `SC-Approval` returnerer `approved_sha`, og kandidaten bygges fra samme commit. For tag-kjøringer sjekker `SC-Approval` etter godkjenning at taggen fortsatt peker på den godkjente commiten. Er taggen flyttet mens godkjenningen ventet, stopper kjøringen, og den nye commiten må gjennom en egen kjøring med egen godkjenning. En godkjenningssak som tilhører en avbrutt eller utløpt kjøring (maksimalt `timeout_minutes`), kan ikke lenger godkjenne noe.
+
+Organisasjonen bruker GitHubs gratisplan. Der kan private repo ikke bruke miljøer (`environment`) med påkrevde godkjennere, secrets per miljø eller regler for hvilke tagger som kan publisere, og heller ikke rulesets for tagger. Produksjonssecrets ligger derfor som repository-secrets, og det er bare release-stegene som får dem. Hvis planen oppgraderes, bør secretene flyttes til et beskyttet `production`-miljø med tag-regel `v*`.
+
 ## Workflow-avhengigheter
 
 Alle eksterne Actions og reusable workflows skal bruke full commit-SHA med lesbar versjon i kommentar. `workflow-pin-policy.yml` avviser mutable referanser og manglende versjonskommentar i pull requests. Dependabot kontrollerer GitHub Actions og validator-avhengighetene ukentlig. Review-forespørsler styres av `.github/CODEOWNERS`, siden Dependabot ikke lenger støtter `reviewers` i `dependabot.yml`.
