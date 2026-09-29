@@ -152,8 +152,16 @@ jobs:
             $commitLines = @('- Ingen commits funnet for sammenligningen.')
           }
 
+          # GitHub anchors each file in a compare view as diff-<SHA-256 of the UTF-8 path>.
           $fileLines = if ($previousTag) {
-            @(git diff --name-only "$previousTag..$($env:SHA)" | Select-Object -First 30 | ForEach-Object { "- ``$_``" })
+            $changedFiles = @(git -c core.quotePath=false diff --name-only "$previousTag..$($env:SHA)")
+            @($changedFiles | Select-Object -First 30 | ForEach-Object {
+                $anchor = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($_))).ToLowerInvariant()
+                "- [``$_``]($compareUrl#diff-$anchor)"
+            })
+            if ($changedFiles.Count -gt 30) {
+              "- … og $($changedFiles.Count - 30) filer til i [$changesLabel]($compareUrl)."
+            }
           }
           else {
             @('- Åpne kandidat-commit for å kontrollere endrede filer.')
