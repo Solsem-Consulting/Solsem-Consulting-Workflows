@@ -7,6 +7,11 @@ on:
         description: "Repository-relative project or solution path used by the shared build gate"
         required: true
         type: string
+      test_projects:
+        description: "Optional JSON array of repository-relative test project paths, run right after the build on the same runner"
+        required: false
+        default: ""
+        type: string
       nuget_config:
         description: "Optional repository-relative NuGet.config path"
         required: false
@@ -43,6 +48,7 @@ jobs:
       NUGET_AUTH_TOKEN: ${{ secrets.NUGET_AUTH_TOKEN || secrets.GH_PACKAGES_READ_TOKEN || github.token }}
       BUILD_TARGET: ${{ inputs.build_target }}
       NUGET_CONFIG: ${{ inputs.nuget_config }}
+      TEST_PROJECTS: ${{ inputs.test_projects }}
 
     steps:
       - name: Checkout
@@ -91,3 +97,43 @@ jobs:
           }
           & dotnet @arguments
           if ($LASTEXITCODE -ne 0) { throw "dotnet build failed." }
+
+      - name: Run configured tests
+        if: ${{ inputs.test_projects != '' }}
+        shell: pwsh
+        run: |
+          $projects = @($env:TEST_PROJECTS | ConvertFrom-Json)
+          if ($projects.Count -eq 0) {
+            throw "test_projects must list at least one test project when it is set."
+          }
+
+          foreach ($project in $projects) {
+            if ([IO.Path]::GetExtension($project) -ne '.csproj' -or -not (Test-Path -LiteralPath $project -PathType Leaf)) {
+              throw "Invalid test project: $project"
+            }
+
+            # The build above already compiled projects that are part of the build target,
+            # so `dotnet test` finds them up to date and only builds what is missing.
+            $restoreArguments = @('restore', $project, '--nologo', '--verbosity', 'minimal', '-m:1', '-nr:false')
+            if (-not [string]::IsNullOrWhiteSpace($env:NUGET_CONFIG)) {
+              $restoreArguments += @('--configfile', $env:NUGET_CONFIG)
+            }
+
+            & dotnet @restoreArguments
+            if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $project." }
+
+            dotnet test $project --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
+            if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $project." }
+          }
+
+      - name: Write test summary
+        if: ${{ inputs.test_projects != '' }}
+        shell: pwsh
+        run: |
+          $projects = @($env:TEST_PROJECTS | ConvertFrom-Json)
+          @(
+            '## Shared build and test gate'
+            ''
+            "- Test projects: $($projects.Count)"
+            '- Status: passed'
+          ) -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8

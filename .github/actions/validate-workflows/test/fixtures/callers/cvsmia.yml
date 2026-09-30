@@ -9,13 +9,8 @@ jobs:
   build:
     uses: ./.github/workflows/SC-Build.yml
     with:
-      build_target: src/CVSmia.slnx
-      nuget_config: NuGet.config
-    secrets: inherit
-  quality:
-    uses: ./.github/workflows/SC-Quality.yml
-    with:
       test_projects: '["CVSmia.App.Tests.csproj"]'
+      build_target: src/CVSmia.slnx
       nuget_config: NuGet.config
     secrets: inherit
   approval:

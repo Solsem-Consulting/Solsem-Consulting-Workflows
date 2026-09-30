@@ -9,12 +9,8 @@ jobs:
   build:
     uses: ./.github/workflows/SC-Build.yml
     with:
-      build_target: src/SetecAstronomy/Karemo.slnx
-    secrets: inherit
-  quality:
-    uses: ./.github/workflows/SC-Quality.yml
-    with:
       test_projects: '["Karemo.Application.Tests.csproj"]'
+      build_target: src/SetecAstronomy/Karemo.slnx
     secrets: inherit
   approval:
     uses: ./.github/workflows/SC-Approval.yml
