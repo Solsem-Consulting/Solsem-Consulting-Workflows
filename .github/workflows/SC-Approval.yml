@@ -242,7 +242,7 @@ jobs:
           ) | Out-File -LiteralPath $approvalPath -Encoding utf8
 
           "path=$approvalPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "title=Publiseringsgodkjenning: $($env:REPOSITORY) $version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "title=Publiseringsgodkjenning: $($env:REPOSITORY) $version ($($env:SHA.Substring(0, 7)))" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Await manual approval
         uses: trstringer/manual-approval@fa642940caf8412403569b28b2db4a1df08a83a3 # v1.13.1
@@ -254,3 +254,26 @@ jobs:
           issue-body-file-path: ${{ steps.approval-context.outputs.path }}
           additional-approved-words: ja,godkjenn,godkjent
           additional-denied-words: nei,avvis,avvist
+
+      # An approval applies to one commit. If the release tag was moved while the
+      # approval was pending, a new run builds and approves the new commit instead.
+      - name: Verify release tag still points to the approved commit
+        if: ${{ github.ref_type == 'tag' }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          APPROVED_SHA: ${{ github.sha }}
+        run: |
+          $object = gh api "repos/$env:REPOSITORY/git/ref/tags/$env:RELEASE_TAG" --jq '.object' | ConvertFrom-Json
+          for ($depth = 0; $object.type -eq 'tag' -and $depth -lt 5; $depth++) {
+            $object = gh api "repos/$env:REPOSITORY/git/tags/$($object.sha)" --jq '.object' | ConvertFrom-Json
+          }
+          if ($LASTEXITCODE -ne 0 -or $object.type -ne 'commit') {
+            throw "Could not resolve release tag $env:RELEASE_TAG to a commit after approval."
+          }
+          if ($object.sha -ne $env:APPROVED_SHA) {
+            throw "Release tag $env:RELEASE_TAG now points to $($object.sha), but the approval applies to $env:APPROVED_SHA. Start a new release run for the moved tag."
+          }
+          Write-Host "Release tag $env:RELEASE_TAG still points to the approved commit $env:APPROVED_SHA."

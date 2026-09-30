@@ -16,5 +16,16 @@ jobs:
     uses: ./.github/workflows/SC-Approval.yml
     with:
       candidate_artifact: release-candidate
+  provenance:
+    uses: ./.github/workflows/SC-Provenance.yml
+    with:
+      release_artifact: signed-release
+      product_name: Karemo
+      release_version: 1.0.0.1
+      public_key: test-public-key
+    secrets: inherit
   post:
     uses: ./.github/workflows/sc-post.yml
+    with:
+      evidence_artifact: release-evidence
+      public_key: test-public-key

@@ -1,0 +1,84 @@
+name: Release evidence
+description: Create or verify a signed SBOM, SHA256SUMS, and SLSA provenance for published release files (Linux runners)
+
+inputs:
+  mode:
+    description: "create: build and sign evidence for release-path; verify: check existing evidence"
+    required: true
+  evidence-path:
+    description: Directory for (create) or with (verify) the evidence files
+    required: true
+  release-path:
+    description: Directory with the published release files; required for create, optional for verify
+    required: false
+    default: ""
+  product:
+    description: Product name used in evidence file names (create)
+    required: false
+    default: ""
+  version:
+    description: Release version used in evidence file names (create)
+    required: false
+    default: ""
+  tag:
+    description: Release tag recorded in the provenance (create)
+    required: false
+    default: ""
+  sbom-archives:
+    description: File name glob of release archives whose contents the SBOM describes (create)
+    required: false
+    default: "*.zip"
+  candidate-digest:
+    description: Approved candidate manifest SHA-256 recorded in the provenance (create)
+    required: false
+    default: ""
+  public-key:
+    description: Release signing public key (PEM)
+    required: true
+  expected-workflow-ref:
+    description: owner/name/path@ref of the workflow that must have signed the evidence (verify); empty skips the check
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install Syft and cosign
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/install-tools.sh" "$RUNNER_TEMP/release-evidence-tools"
+
+    # The caller passes RELEASE_SIGNING_KEY and RELEASE_SIGNING_PASSWORD as step env.
+    - name: Create signed release evidence
+      if: ${{ inputs.mode == 'create' }}
+      shell: bash
+      env:
+        RELEASE_DIR: ${{ inputs.release-path }}
+        EVIDENCE_DIR: ${{ inputs.evidence-path }}
+        PRODUCT: ${{ inputs.product }}
+        VERSION: ${{ inputs.version }}
+        TAG: ${{ inputs.tag }}
+        SBOM_ARCHIVES: ${{ inputs.sbom-archives }}
+        CANDIDATE_DIGEST: ${{ inputs.candidate-digest }}
+        PUBLIC_KEY: ${{ inputs.public-key }}
+      run: |
+        SYFT="$RUNNER_TEMP/release-evidence-tools/syft" COSIGN="$RUNNER_TEMP/release-evidence-tools/cosign" \
+          bash "$GITHUB_ACTION_PATH/create-evidence.sh"
+
+    - name: Verify release evidence
+      if: ${{ inputs.mode == 'verify' }}
+      shell: bash
+      env:
+        RELEASE_DIR: ${{ inputs.release-path }}
+        EVIDENCE_DIR: ${{ inputs.evidence-path }}
+        PUBLIC_KEY: ${{ inputs.public-key }}
+        EXPECTED_REPOSITORY: ${{ github.repository }}
+        EXPECTED_COMMIT: ${{ github.sha }}
+        EXPECTED_WORKFLOW_REF: ${{ inputs.expected-workflow-ref }}
+      run: COSIGN="$RUNNER_TEMP/release-evidence-tools/cosign" bash "$GITHUB_ACTION_PATH/verify-evidence.sh"
+
+    - name: Reject unknown mode
+      if: ${{ inputs.mode != 'create' && inputs.mode != 'verify' }}
+      shell: bash
+      run: |
+        echo "::error::release-evidence mode must be create or verify."
+        exit 1

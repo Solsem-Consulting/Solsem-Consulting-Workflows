@@ -1,0 +1,107 @@
+name: SC-Provenance
+
+on:
+  workflow_call:
+    inputs:
+      release_artifact:
+        description: "Workflow artifact that holds exactly the files that were published"
+        required: true
+        type: string
+      product_name:
+        description: "Product name used in the evidence file names"
+        required: true
+        type: string
+      release_version:
+        description: "Published release version"
+        required: true
+        type: string
+      release_tag:
+        description: "Published release tag, if any"
+        required: false
+        default: ""
+        type: string
+      sbom_archives:
+        description: "File name glob of release archives whose contents the SBOM describes"
+        required: false
+        default: "*.zip"
+        type: string
+      candidate_digest:
+        description: "Approved candidate manifest SHA-256 from SC-Approval, recorded in the provenance"
+        required: false
+        default: ""
+        type: string
+      public_key:
+        description: "Release signing public key (PEM), normally vars.RELEASE_SIGNING_PUBLIC_KEY"
+        required: true
+        type: string
+      evidence_retention_days:
+        description: "Retention for the evidence artifact"
+        required: false
+        default: 30
+        type: number
+    secrets:
+      RELEASE_SIGNING_KEY:
+        description: "Encrypted cosign private key (PEM)"
+        required: true
+      RELEASE_SIGNING_PASSWORD:
+        description: "Password for RELEASE_SIGNING_KEY"
+        required: true
+    outputs:
+      evidence_artifact:
+        description: "Workflow artifact with SHA256SUMS, the SBOM, the signed provenance, and VERIFY.md"
+        value: ${{ jobs.provenance.outputs.evidence_artifact }}
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      evidence_artifact: release-evidence
+    steps:
+      - name: Download published release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ${{ inputs.release_artifact }}
+          path: ${{ runner.temp }}/release
+
+      - name: Create signed SBOM, checksums, and provenance
+        uses: Solsem-Consulting/Solsem-Consulting-Workflows/.github/actions/release-evidence@f54ee5c18a4ba765b8273f2a57eda9f2ab113c8c # release-evidence 2026-09-28
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+          RELEASE_SIGNING_PASSWORD: ${{ secrets.RELEASE_SIGNING_PASSWORD }}
+        with:
+          mode: create
+          release-path: ${{ runner.temp }}/release
+          evidence-path: ${{ runner.temp }}/evidence
+          product: ${{ inputs.product_name }}
+          version: ${{ inputs.release_version }}
+          tag: ${{ inputs.release_tag }}
+          sbom-archives: ${{ inputs.sbom_archives }}
+          candidate-digest: ${{ inputs.candidate_digest }}
+          public-key: ${{ inputs.public_key }}
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-evidence
+          path: ${{ runner.temp }}/evidence
+          if-no-files-found: error
+          retention-days: ${{ inputs.evidence_retention_days }}
+
+      - name: Write evidence summary
+        shell: bash
+        env:
+          EVIDENCE_DIR: ${{ runner.temp }}/evidence
+        run: |
+          {
+            echo "## Signed release evidence"
+            echo
+            echo "SBOM, SHA256SUMS, and SLSA provenance signed with the release signing key. See VERIFY.md in the \`release-evidence\` artifact."
+            echo
+            echo '```text'
+            cat "$EVIDENCE_DIR/SHA256SUMS"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
