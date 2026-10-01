@@ -5,7 +5,7 @@ Felles GitHub Actions-kontrakter for CVSmia og Karemo.
 ## Release-kjede
 
 1. Produktrepoets `.github/workflows/publish.yml` eier manuell/tag-trigger, konkrete paths og token-permissions.
-2. `sc-core.yml` validerer repository/solution-kontrakten.
+2. `sc-core.yml` validerer repository/solution-kontrakten. Med input `require_default_branch: true` avviser den også en release-tag som ikke peker på en commit på repoets standardbranch (tag fra `tag`-inputen, ellers tag-refen som startet kjøringen). Sjekken bruker GitHub-API-et med `github.token`, trenger ingen full historikk og er av som standard. Den erstatter tag-rulesets, som gratisplanen ikke gir i private repo.
 3. `SC-Build.yml` restorer og bygger løsningen med felles .NET-oppsett. Med input `test_projects` (JSON-liste med `.csproj`-stier) kjører den også produktets testprosjekter i samme jobb, rett etter bygget. Da betales checkout, .NET-oppsett og restore én gang, og testene bygger ikke om det som allerede er bygget.
 4. `SC-Quality.yml` kjører testprosjektene i en egen jobb med egen checkout og eget bygg. Den beholdes for eksisterende referanser, men nye og oppdaterte produktrepo bør bruke `test_projects` i `SC-Build.yml` og droppe quality-jobben. Det sparer Windows-minutter per release.
 5. Produktets lokale kandidat-workflow bygger og pakker release-filene én gang og laster dem opp som artefakten `release-candidate`.

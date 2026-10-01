@@ -7,6 +7,16 @@ on:
         description: "Repository-relative solution path"
         required: true
         type: string
+      require_default_branch:
+        description: "Fail unless the release tag points to a commit on the repository's default branch"
+        required: false
+        default: false
+        type: boolean
+      tag:
+        description: "Release tag to check; defaults to the tag that triggered the run"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -39,6 +49,61 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "Repository contains whitespace errors."
           }
+
+      - name: Require release commit on default branch
+        if: ${{ inputs.require_default_branch }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="${INPUT_TAG:-}"
+          if [ -z "$tag" ] && [ "$REF_TYPE" = "tag" ]; then
+            tag="$REF_NAME"
+          fi
+          if [ -z "$tag" ]; then
+            echo "::error::require_default_branch is set, but no release tag was given (input 'tag' or a tag ref)."
+            exit 1
+          fi
+          if ! [[ "$tag" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "::error::Release tag contains unexpected characters."
+            exit 1
+          fi
+          if [ -z "${DEFAULT_BRANCH:-}" ]; then
+            echo "::error::Could not determine the default branch of $REPOSITORY."
+            exit 1
+          fi
+
+          # Resolve the tag to a commit; an annotated tag points to a tag object first.
+          type="$(gh api "repos/$REPOSITORY/git/ref/tags/$tag" --jq .object.type)" \
+            && sha="$(gh api "repos/$REPOSITORY/git/ref/tags/$tag" --jq .object.sha)" \
+            || { echo "::error::Tag $tag was not found in $REPOSITORY."; exit 1; }
+          for _ in 1 2 3; do
+            [ "$type" = "tag" ] || break
+            type="$(gh api "repos/$REPOSITORY/git/tags/$sha" --jq .object.type)"
+            sha="$(gh api "repos/$REPOSITORY/git/tags/$sha" --jq .object.sha)"
+          done
+          if [ "$type" != "commit" ]; then
+            echo "::error::Tag $tag does not point to a commit."
+            exit 1
+          fi
+
+          # The commit is on the default branch when it is the branch tip or one of its ancestors.
+          status="$(gh api "repos/$REPOSITORY/compare/$DEFAULT_BRANCH...$sha" --jq .status)"
+          case "$status" in
+            identical | behind)
+              echo "Tag $tag ($sha) is on $DEFAULT_BRANCH."
+              ;;
+            *)
+              echo "::error::Tag $tag ($sha) is not on $DEFAULT_BRANCH (compare status: $status). Releases must be tagged from $DEFAULT_BRANCH."
+              exit 1
+              ;;
+          esac
 
       - name: Write preflight summary
         shell: pwsh
