@@ -80,9 +80,11 @@ jobs:
           fi
 
           # Resolve the tag to a commit; an annotated tag points to a tag object first.
-          type="$(gh api "repos/$REPOSITORY/git/ref/tags/$tag" --jq .object.type)" \
-            && sha="$(gh api "repos/$REPOSITORY/git/ref/tags/$tag" --jq .object.sha)" \
-            || { echo "::error::Tag $tag was not found in $REPOSITORY."; exit 1; }
+          if ! ref_json="$(gh api "repos/$REPOSITORY/git/ref/tags/$tag" --jq '.object.type + " " + .object.sha')"; then
+            echo "::error::Tag $tag was not found in $REPOSITORY."
+            exit 1
+          fi
+          read -r type sha <<< "$ref_json"
           for _ in 1 2 3; do
             [ "$type" = "tag" ] || break
             type="$(gh api "repos/$REPOSITORY/git/tags/$sha" --jq .object.type)"
