@@ -6,6 +6,8 @@ jobs:
     uses: ./.github/workflows/sc-core.yml
     with:
       solution: src/CVSmia.slnx
+      require_default_branch: true
+      tag: v0.0.0-test
   build:
     uses: ./.github/workflows/SC-Build.yml
     with:
