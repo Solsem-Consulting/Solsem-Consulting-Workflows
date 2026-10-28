@@ -12,6 +12,11 @@ on:
         required: false
         default: ""
         type: string
+      test_runner:
+        description: "How test_projects run: 'vstest' (default, `dotnet test <project>`) or 'mtp' (Microsoft.Testing.Platform, `dotnet test --project <project>`; the caller's global.json must set test.runner to Microsoft.Testing.Platform)"
+        required: false
+        default: "vstest"
+        type: string
       nuget_config:
         description: "Optional repository-relative NuGet.config path"
         required: false
@@ -49,6 +54,7 @@ jobs:
       BUILD_TARGET: ${{ inputs.build_target }}
       NUGET_CONFIG: ${{ inputs.nuget_config }}
       TEST_PROJECTS: ${{ inputs.test_projects }}
+      TEST_RUNNER: ${{ inputs.test_runner }}
 
     steps:
       - name: Checkout
@@ -107,6 +113,10 @@ jobs:
             throw "test_projects must list at least one test project when it is set."
           }
 
+          if ($env:TEST_RUNNER -notin @('vstest', 'mtp')) {
+            throw "test_runner must be 'vstest' or 'mtp': $env:TEST_RUNNER"
+          }
+
           foreach ($project in $projects) {
             if ([IO.Path]::GetExtension($project) -ne '.csproj' -or -not (Test-Path -LiteralPath $project -PathType Leaf)) {
               throw "Invalid test project: $project"
@@ -122,6 +132,19 @@ jobs:
             & dotnet @restoreArguments
             if ($LASTEXITCODE -ne 0) { throw "dotnet restore failed for $project." }
 
+            if ($env:TEST_RUNNER -eq 'mtp') {
+              # In Microsoft.Testing.Platform mode `dotnet test` takes the project through --project
+              # and passes options it does not know, such as --nologo, -m:1 and -nr:false, on to the
+              # test application, which rejects them. Build with the same MSBuild settings as the
+              # VSTest path first, then run the tests without building again.
+              dotnet build $project --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
+              if ($LASTEXITCODE -ne 0) { throw "dotnet build failed for $project." }
+
+              dotnet test --project $project --configuration Release --no-build --verbosity minimal
+              if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $project." }
+              continue
+            }
+
             dotnet test $project --configuration Release --no-restore --nologo --verbosity minimal -m:1 -nr:false -p:EnableWindowsTargeting=true -p:UseSharedCompilation=false
             if ($LASTEXITCODE -ne 0) { throw "dotnet test failed for $project." }
           }
@@ -135,5 +158,6 @@ jobs:
             '## Shared build and test gate'
             ''
             "- Test projects: $($projects.Count)"
+            "- Test runner: $env:TEST_RUNNER"
             '- Status: passed'
           ) -join "`n" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
