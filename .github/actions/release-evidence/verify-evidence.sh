@@ -12,9 +12,13 @@
 #   COSIGN                path to cosign (default: cosign on PATH)
 set -euo pipefail
 
-cosign="${COSIGN:-cosign}"
-evidence_dir="${EVIDENCE_DIR:?EVIDENCE_DIR is required}"
+# shellcheck source=platform.sh
+. "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/platform.sh"
+
+cosign=$(posix_path "${COSIGN:-cosign}")
+evidence_dir=$(posix_path "${EVIDENCE_DIR:?EVIDENCE_DIR is required}")
 release_dir="${RELEASE_DIR:-}"
+[ -z "$release_dir" ] || release_dir=$(posix_path "$release_dir")
 server_url="${GITHUB_SERVER_URL:-https://github.com}"
 
 fail() {
@@ -27,7 +31,10 @@ if [ -z "${EXPECTED_REPOSITORY:-}" ] || [ -z "${EXPECTED_COMMIT:-}" ]; then
   fail "EXPECTED_REPOSITORY and EXPECTED_COMMIT are required."
 fi
 [ -f "$evidence_dir/SHA256SUMS" ] || fail "SHA256SUMS not found in $evidence_dir."
-mapfile -t bundles < <(find "$evidence_dir" -maxdepth 1 -type f -name '*.provenance.sigstore.json')
+bundles=()
+while IFS= read -r found; do
+  bundles+=("$found")
+done < <(find "$evidence_dir" -maxdepth 1 -type f -name '*.provenance.sigstore.json')
 [ "${#bundles[@]}" -eq 1 ] || fail "Expected exactly one *.provenance.sigstore.json in $evidence_dir, found ${#bundles[@]}."
 bundle="${bundles[0]}"
 
@@ -36,11 +43,11 @@ trap 'rm -rf "$work_dir"' EXIT
 printf '%s\n' "$PUBLIC_KEY" > "$work_dir/cosign.pub"
 
 "$cosign" verify-blob-attestation \
-  --key "$work_dir/cosign.pub" \
+  --key "$(native_path "$work_dir/cosign.pub")" \
   --type slsaprovenance1 \
-  --bundle "$bundle" \
+  --bundle "$(native_path "$bundle")" \
   --insecure-ignore-tlog=true \
-  "$evidence_dir/SHA256SUMS" > /dev/null 2>"$work_dir/cosign.log" ||
+  "$(native_path "$evidence_dir/SHA256SUMS")" > /dev/null 2>"$work_dir/cosign.log" ||
   fail "cosign could not verify $(basename "$bundle") for SHA256SUMS with the release signing key: $(grep -v '^WARNING' "$work_dir/cosign.log" | tail -1)"
 
 # The bundle's signature is verified above; its payload is the signed in-toto statement.
@@ -74,7 +81,7 @@ while IFS= read -r line; do
   else
     continue
   fi
-  actual_hash=$(sha256sum "$file" | awk '{ print $1 }')
+  actual_hash=$(sha256 "$file" | awk '{ print $1 }')
   [ "$actual_hash" = "$expected_hash" ] || fail "$name does not match SHA256SUMS (expected $expected_hash, found $actual_hash)."
   checked=$((checked + 1))
 done < "$evidence_dir/SHA256SUMS"

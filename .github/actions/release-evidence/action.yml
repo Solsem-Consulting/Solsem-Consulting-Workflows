@@ -1,5 +1,5 @@
 name: Release evidence
-description: Create or verify a signed SBOM, SHA256SUMS, and SLSA provenance for published release files (Linux runners)
+description: Create or verify a signed SBOM, SHA256SUMS, and SLSA provenance for published release files (Linux, Windows, and macOS runners)
 
 inputs:
   mode:

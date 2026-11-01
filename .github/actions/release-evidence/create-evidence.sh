@@ -13,15 +13,18 @@
 #   SYFT and COSIGN (paths), and the default GITHUB_* variables.
 set -euo pipefail
 
-syft="${SYFT:-syft}"
-cosign="${COSIGN:-cosign}"
-release_dir="${RELEASE_DIR:?RELEASE_DIR is required}"
-evidence_dir="${EVIDENCE_DIR:?EVIDENCE_DIR is required}"
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=platform.sh
+. "$script_dir/platform.sh"
+
+syft=$(posix_path "${SYFT:-syft}")
+cosign=$(posix_path "${COSIGN:-cosign}")
+release_dir=$(posix_path "${RELEASE_DIR:?RELEASE_DIR is required}")
+evidence_dir=$(posix_path "${EVIDENCE_DIR:?EVIDENCE_DIR is required}")
 product="${PRODUCT:?PRODUCT is required}"
 version="${VERSION:?VERSION is required}"
 sbom_archives="${SBOM_ARCHIVES:-*.zip}"
 server_url="${GITHUB_SERVER_URL:-https://github.com}"
-script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 fail() {
   echo "::error title=Release evidence failed::$1"
@@ -54,10 +57,10 @@ while IFS= read -r -d '' archive; do
   archives=$((archives + 1))
 done < <(find "$release_dir" -maxdepth 1 -type f -name "$sbom_archives" -print0 | sort -z)
 [ "$archives" -gt 0 ] || fail "No release archive matches '$sbom_archives' in $release_dir; the SBOM needs the shipped application files."
-SYFT_CHECK_FOR_APP_UPDATE=false "$syft" scan "dir:$work_dir/sbom-source" \
+SYFT_CHECK_FOR_APP_UPDATE=false "$syft" scan "dir:$(native_path "$work_dir/sbom-source")" \
   --source-name "$product" \
   --source-version "$version" \
-  --output "cyclonedx-json=$evidence_dir/$sbom_name" \
+  --output "cyclonedx-json=$(native_path "$evidence_dir/$sbom_name")" \
   --quiet
 components=$(jq '[.components[]? | select(.type == "library")] | length' "$evidence_dir/$sbom_name")
 echo "SBOM $sbom_name lists $components library component(s) from $archives archive(s)."
@@ -65,8 +68,8 @@ echo "SBOM $sbom_name lists $components library component(s) from $archives arch
 # SHA256SUMS covers every published file and the SBOM.
 (
   cd "$release_dir"
-  find . -type f -print0 | sort -z | xargs -0 sha256sum | sed 's#  \./#  #'
-  (cd "$evidence_dir" && sha256sum "$sbom_name")
+  find . -type f -print0 | sort -z | xargs -0 "${sha256_cmd[@]}" | normalize_sums | sed 's#  \./#  #'
+  (cd "$evidence_dir" && sha256 "$sbom_name")
 ) > "$evidence_dir/SHA256SUMS"
 
 # SLSA v1 provenance: which repository, commit, and workflow run produced these files.
@@ -104,17 +107,17 @@ jq -n \
 
 COSIGN_PASSWORD="$RELEASE_SIGNING_PASSWORD" "$cosign" attest-blob \
   --key env://RELEASE_SIGNING_KEY \
-  --predicate "$work_dir/provenance.json" \
+  --predicate "$(native_path "$work_dir/provenance.json")" \
   --type slsaprovenance1 \
   --use-signing-config=false \
   --tlog-upload=false \
-  --bundle "$evidence_dir/$bundle_name" \
+  --bundle "$(native_path "$evidence_dir/$bundle_name")" \
   --yes \
-  "$evidence_dir/SHA256SUMS" > /dev/null 2>"$work_dir/cosign.log" ||
+  "$(native_path "$evidence_dir/SHA256SUMS")" > /dev/null 2>"$work_dir/cosign.log" ||
   fail "cosign could not sign the provenance: $(tail -1 "$work_dir/cosign.log")"
 
 printf '%s\n' "$PUBLIC_KEY" > "$work_dir/cosign.pub"
-fingerprint=$(openssl pkey -pubin -in "$work_dir/cosign.pub" -outform DER 2>/dev/null | sha256sum | awk '{ print $1 }')
+fingerprint=$(openssl pkey -pubin -in "$work_dir/cosign.pub" -outform DER 2>/dev/null | sha256 | awk '{ print $1 }')
 [ -n "$fingerprint" ] || fail "RELEASE_SIGNING_PUBLIC_KEY is not a valid PEM public key."
 
 cat > "$evidence_dir/VERIFY.md" <<EOF
