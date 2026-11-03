@@ -1,10 +1,8 @@
 name: Workflow pin policy
 
+# Manual only, to save Actions minutes on the free plan. Run ./scripts/Test-WorkflowPins.ps1 locally before merging.
 on:
-  pull_request:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read

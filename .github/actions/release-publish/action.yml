@@ -1,0 +1,96 @@
+name: Release publish
+description: >-
+  Create the signed SBOM, SHA256SUMS, and SLSA provenance for the published release files in the same job,
+  verify them, and attach them (and optional release assets) to the GitHub Release of the tag.
+  No workflow artifact is stored. Linux, Windows, and macOS runners.
+
+inputs:
+  release-path:
+    description: Directory with exactly the files that were published
+    required: true
+  product:
+    description: Product name used in the evidence file names
+    required: true
+  version:
+    description: Published release version
+    required: true
+  tag:
+    description: Release tag; the GitHub Release is created for it when it does not exist
+    required: true
+  sbom-archives:
+    description: File name glob of release archives whose contents the SBOM describes
+    required: false
+    default: "*.zip"
+  public-key:
+    description: Release signing public key (PEM), normally vars.RELEASE_SIGNING_PUBLIC_KEY
+    required: true
+  release-assets:
+    description: Optional newline-separated files from release-path to attach to the GitHub Release as well
+    required: false
+    default: ""
+  make-latest:
+    description: Mark the GitHub Release as latest when it is created
+    required: false
+    default: "true"
+  token:
+    description: Token with contents:write for the GitHub Release
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Syft and cosign
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/../release-evidence/install-tools.sh" "$RUNNER_TEMP/release-evidence-tools"
+
+    # The caller passes RELEASE_SIGNING_KEY and RELEASE_SIGNING_PASSWORD as step env.
+    # create-evidence.sh verifies the evidence against this repository, commit, and workflow before it returns.
+    - name: Create and verify signed release evidence
+      shell: bash
+      env:
+        RELEASE_DIR: ${{ inputs.release-path }}
+        EVIDENCE_DIR: ${{ runner.temp }}/release-evidence
+        PRODUCT: ${{ inputs.product }}
+        VERSION: ${{ inputs.version }}
+        TAG: ${{ inputs.tag }}
+        SBOM_ARCHIVES: ${{ inputs.sbom-archives }}
+        PUBLIC_KEY: ${{ inputs.public-key }}
+      run: |
+        SYFT="$RUNNER_TEMP/release-evidence-tools/syft" COSIGN="$RUNNER_TEMP/release-evidence-tools/cosign" \
+          bash "$GITHUB_ACTION_PATH/../release-evidence/create-evidence.sh"
+
+    - name: Attach evidence to the GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        GH_REPO: ${{ github.repository }}
+        TAG: ${{ inputs.tag }}
+        RELEASE_DIR: ${{ inputs.release-path }}
+        EVIDENCE_DIR: ${{ runner.temp }}/release-evidence
+        RELEASE_ASSETS: ${{ inputs.release-assets }}
+        MAKE_LATEST: ${{ inputs.make-latest }}
+      run: |
+        set -euo pipefail
+        . "$GITHUB_ACTION_PATH/../release-evidence/platform.sh"
+        EVIDENCE_DIR=$(posix_path "$EVIDENCE_DIR")
+        RELEASE_DIR=$(posix_path "$RELEASE_DIR")
+        if ! gh release view "$TAG" > /dev/null 2>&1; then
+          gh release create "$TAG" --verify-tag --generate-notes --title "$TAG" --latest="$MAKE_LATEST"
+        fi
+        files=("$EVIDENCE_DIR"/*)
+        while IFS= read -r asset; do
+          [ -n "$asset" ] || continue
+          [ -f "$RELEASE_DIR/$asset" ] || { echo "::error::Release asset not found: $asset"; exit 1; }
+          files+=("$RELEASE_DIR/$asset")
+        done <<< "$RELEASE_ASSETS"
+        gh release upload "$TAG" "${files[@]}" --clobber
+        {
+          echo "## Signed release evidence"
+          echo
+          echo "Attached to GitHub Release \`$TAG\`. See VERIFY.md there."
+          echo
+          echo '```text'
+          cat "$EVIDENCE_DIR/SHA256SUMS"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"

@@ -2,6 +2,19 @@
 
 Felles GitHub Actions-kontrakter for CVSmia og Karemo.
 
+## Minimal release (én jobb)
+
+Organisasjonen er på gratisplanen, så Actions-minutter og artefaktlagring er knappe. En produksjonsrelease bruker derfor bare de to composite-actionene under, i én og samme jobb i produktrepoet, uten workflow-artefakter mellom jobber:
+
+1. Releasen startes manuelt på taggen: `gh workflow run publish.yml --ref vX.Y.Z` (produktets release-skript gjør dette etter at taggen er pushet). Den manuelle starten er godkjenningen; ingen runner venter på svar.
+2. `.github/actions/release-tag-check` stopper releasen hvis kjøringen ikke står på en tag som matcher `tag-pattern` (standard `v*`), og som peker på en commit på standardbranchen.
+3. Produktet bygger, signerer og publiserer til FTP i samme jobb. Tester kjøres lokalt før taggen settes, ikke i Actions.
+4. `.github/actions/release-publish` lager SBOM, `SHA256SUMS` og signert provenance for de publiserte filene (se «Signert release-bevis»), verifiserer dem, oppretter GitHub Release for taggen hvis den mangler og legger ved beviset og eventuelle `release-assets`. GitHub Release-vedlegg teller ikke mot Actions-lagringen.
+
+Begge actionene og `release-evidence` kjører på Linux, Windows (Git Bash) og macOS. Syft og cosign er pinnet med SHA-256 per plattform i `install-tools.sh`.
+
+Release-kjeden under (`sc-core.yml`, `SC-Build.yml`, `SC-Approval.yml`, `SC-Provenance.yml`, `sc-post.yml`) beholdes for eksisterende referanser, men brukes ikke av den minimale releasen.
+
 ## Release-kjede
 
 1. Produktrepoets `.github/workflows/publish.yml` eier manuell/tag-trigger, konkrete paths og token-permissions.

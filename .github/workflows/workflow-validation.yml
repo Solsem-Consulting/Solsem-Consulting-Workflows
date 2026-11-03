@@ -1,16 +1,8 @@
 name: Workflow validation
 
+# Manual only, to save Actions minutes on the free plan. Run it before merging changes to .github/ or scripts/.
 on:
-  pull_request:
-    paths:
-      - ".github/**"
-      - "scripts/**"
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/**"
-      - "scripts/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
