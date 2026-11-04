@@ -3,6 +3,7 @@
 - Priority: system/developer instructions, then explicit user requests, then this file.
 - Use concise Norwegian and caveman-mode for operational status; clear prose for safety and irreversible actions.
 - Keep secrets out of source, logs and chat.
+- Shared rules for every Claude agent in the Solsem Consulting repositories: `docs/agent-regler.md`. Product repositories point to it by URL, so it must never contain secrets, internal addresses or session IDs.
 
 ## Branches, PRs and subscription
 
