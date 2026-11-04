@@ -59,6 +59,16 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
 - Skriv aldri hemmeligheter, lisensinnhold eller persondata i saken.
 - Den daglige statusrutinen leser alle statussakene og skriver et sammendrag. Skriv derfor «Trenger eieren» tydelig.
 
+## Jobb i kø: etiketten `agent`
+
+- Eieren legger jobb i kø ved å opprette en sak med etiketten `agent` i repoet.
+- Den daglige statusrunden vekker agenten i repoet når den finner minst ett av disse:
+  - en slik sak som ikke allerede har en åpen PR
+  - en agent-PR med rød CI, merge-konflikt eller review-kommentar fra et menneske som ikke er besvart
+- Høyst fire agenter vekkes per runde. Resten venter til neste runde.
+- Når agenten er vekket, gjør den jobben etter repoets `AGENTS.md`. PR-en lukker saken (`Closes #N`), og agenten skriver status i `Agentstatus` når den er ferdig eller blokkert.
+- Er en `agent`-sak uklar, spør agenten i saken i stedet for å gjette, og skriver i `Agentstatus` at den venter på eieren.
+
 ## Grenser i skyøkter
 
 - **Grener:** en skyøkt kan ikke slette grener på GitHub (HTTP 403). Be eieren slette dem, eller slå på «Automatically delete head branches» i repoet.
