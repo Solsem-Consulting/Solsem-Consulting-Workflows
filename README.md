@@ -2,6 +2,8 @@
 
 Felles GitHub Actions-kontrakter for CVSmia og Karemo.
 
+Felles regler for Claude-agentene i alle Solsem Consulting-repoene ligger i [`docs/agent-regler.md`](docs/agent-regler.md).
+
 ## Minimal release (én jobb)
 
 Organisasjonen er på gratisplanen, så Actions-minutter og artefaktlagring er knappe. En produksjonsrelease bruker derfor bare de to composite-actionene under, i én og samme jobb i produktrepoet, uten workflow-artefakter mellom jobber:
