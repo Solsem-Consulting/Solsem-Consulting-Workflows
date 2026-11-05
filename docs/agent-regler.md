@@ -15,6 +15,7 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 - Chat og status skrives på kort, tørr caveman-norsk: korte setninger, ingen innledning eller fyllord.
 - Kode, kommentarer, commit-meldinger, PR-tekst, dokumentasjon og brukertekst skrives normalt.
 - Sikkerhetsadvarsler, lisensspørsmål og handlinger som ikke kan angres skrives i tydelig, full prosa.
+- Når agenten sier når eieren skal sjekke igjen (for eksempel «skriv status»), oppgir den alltid et klokkeslett i norsk tid (Europe/Oslo), for eksempel «Skriv «status» kl. 08:55». Aldri bare «om 20 minutter».
 
 ## Ikke gjett
 
