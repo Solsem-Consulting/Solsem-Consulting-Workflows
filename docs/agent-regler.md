@@ -33,15 +33,21 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 ## Eget repo, saker i andre repoer
 
 - Hver agent endrer bare sitt eget repo: kode, grener, PR-er og sin egen `Agentstatus`.
-- Agenten kan lese andre repoer når den trenger det for å forstå en kontrakt eller et grensesnitt. Den endrer dem aldri: ingen push, grener, PR-er, kommentarer i PR-er eller lukking av saker der, selv om den har tilgang.
-- Trengs en endring i et annet repo, oppretter agenten en sak der:
-  - Tittelen sier hva som trengs.
-  - Teksten sier hvorfor, hva som er ferdig når saken er løst, og lenker til saken eller PR-en i agentens eget repo.
-  - Agenten setter **ikke** etiketten `agent`. Eieren avgjør om saken skal i kø for agenten i det repoet.
-  - Agenten skriver i sin egen `Agentstatus` under «Trenger eieren» at saken er opprettet, med lenke.
-- Agenten søker etter en lik sak i repoet før den oppretter en ny.
+- Agenten kan lese andre repoer når den trenger det for å forstå en kontrakt eller et grensesnitt. Den endrer dem aldri: ingen push, grener, PR-er, saker eller kommentarer der, selv om den har tilgang.
+- Trengs en endring i et annet repo, ber agenten koordinatoren om å opprette saken. Agenten oppretter den ikke selv. Bestillingen skrives som en kommentar i agentens egen `Agentstatus` med denne overskriften og disse feltene:
+
+  ```
+  **Ønsket sak i annet repo**
+  - Repo: Solsem-Consulting/<repo>
+  - Tittel: …
+  - Hva trengs og hvorfor: …
+  - Ferdig når: …
+  - Lenke: <sak eller PR i eget repo>
+  ```
+
+- Koordinatoren leser `Agentstatus` i statusrunden, søker etter duplikater og oppretter saken i det andre repoet uten etiketten `agent`. Så svarer den i agentens `Agentstatus` med lenke til den nye saken. Eieren avgjør om saken skal i kø.
 - Venter jobben i eget repo på saken i det andre repoet, skriver agenten det i `Agentstatus` og lar egen PR stå som utkast eller med tydelig merknad.
-- Felles regler, workflows og annet som gjelder flere repoer, endres bare i repoet der det ligger, etter at eieren har bedt om det.
+- Koordinatoren kan arbeide på tvers av repoer, men bare når eieren ber om det, og bare med felles regler, workflows og saker. Kode i et produktrepo endres av agenten for det repoet.
 
 ## Sikkerhet og lisens
 
