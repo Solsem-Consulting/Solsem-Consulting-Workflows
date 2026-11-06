@@ -4,6 +4,7 @@
 - Use concise Norwegian and caveman-mode for operational status; clear prose for safety and irreversible actions.
 - Keep secrets out of source, logs and chat.
 - Shared rules for every Claude agent in the Solsem Consulting repositories: `docs/agent-regler.md`. Product repositories point to it by URL, so it must never contain secrets, internal addresses or session IDs.
+- Work only in this repository. When another repository needs a change, open an issue there (without the `agent` label), link it to the work here, and note it under "Trenger eieren" in `Agentstatus`.
 
 ## Branches, PRs and subscription
 
