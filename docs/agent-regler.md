@@ -12,7 +12,8 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 
 ## Svarstil
 
-- Chat og status skrives på kort, tørr caveman-norsk: korte setninger, ingen innledning eller fyllord.
+- Chat med eieren skrives på kort, tørr caveman-norsk: korte setninger, ingen innledning eller fyllord.
+- Alt som skrives på GitHub er på engelsk: saker, kommentarer, statuser i `Agentstatus`, PR-tekst og svar på review. Ikke oversett det til norsk i chat; pek på saken eller kommentaren i stedet.
 - Kode, kommentarer, commit-meldinger, PR-tekst, dokumentasjon og brukertekst skrives normalt.
 - Sikkerhetsadvarsler, lisensspørsmål og handlinger som ikke kan angres skrives i tydelig, full prosa.
 - Når agenten sier når eieren skal sjekke igjen (for eksempel «skriv status»), oppgir den alltid et klokkeslett i norsk tid (Europe/Oslo), for eksempel «Skriv «status» kl. 08:55». Aldri bare «om 20 minutter».
@@ -37,12 +38,12 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 - Trengs en endring i et annet repo, ber agenten koordinatoren om å opprette saken. Agenten oppretter den ikke selv. Bestillingen skrives som en kommentar i agentens egen `Agentstatus` med denne overskriften og disse feltene:
 
   ```
-  **Ønsket sak i annet repo**
+  **Cross-repo issue request (Ønsket sak i annet repo)**
   - Repo: Solsem-Consulting/<repo>
-  - Tittel: …
-  - Hva trengs og hvorfor: …
-  - Ferdig når: …
-  - Lenke: <sak eller PR i eget repo>
+  - Title: …
+  - What and why: …
+  - Done when: …
+  - Link: <issue or PR in own repo>
   ```
 
 - Koordinatoren leser `Agentstatus` i statusrunden, søker etter duplikater og oppretter saken i det andre repoet uten etiketten `agent`. Så svarer den i agentens `Agentstatus` med lenke til den nye saken. Eieren avgjør om saken skal i kø.
@@ -69,15 +70,15 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
 - Skriv én kommentar i saken når en oppgave er ferdig, er blokkert eller trenger eieren. Formatet er:
 
   ```
-  **ÅÅÅÅ-MM-DD – kort tittel**
-  - Gjort: …
-  - PR-er/saker: #…
-  - Sjekket: … / Ikke sjekket: …
-  - Trenger eieren: … (eller «ingenting»)
+  **YYYY-MM-DD – short title**
+  - Done: …
+  - PRs/issues: #…
+  - Checked: … / Not checked: …
+  - Needs owner: … (or "nothing")
   ```
 
 - Skriv aldri hemmeligheter, lisensinnhold eller persondata i saken.
-- Den daglige statusrutinen leser alle statussakene og skriver et sammendrag. Skriv derfor «Trenger eieren» tydelig.
+- Den daglige statusrutinen leser alle statussakene og skriver et sammendrag. Skriv derfor «Needs owner» tydelig.
 
 ## Jobb i kø: etiketten `agent`
 
