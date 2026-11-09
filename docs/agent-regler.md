@@ -110,8 +110,29 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
 ## Grenser i skyøkter
 
 - **Grener:** en skyøkt kan ikke slette grener på GitHub (HTTP 403). Be eieren slette dem, eller slå på «Automatically delete head branches» i repoet.
-- **Windows:** WinForms-tester, Windows-bilder og DPAPI trenger Windows, og det har ikke skyøkten. Skriv det i statussaken, så kan eierens PC-økt ta oppgaven.
+- **Windows:** WinForms-tester, Windows-bilder og DPAPI trenger Windows, og det har ikke skyøkten. Bestill kjøringen i jobbkøen for Windows-PC-en (se under).
 - **macOS, StoreKit og signering:** kan ikke bekreftes uten Mac eller TestFlight. Si hva CI har sjekket, og hva som står igjen.
+
+## Windows-PC: jobbkø
+
+Eieren har en PC-økt med Windows. Agentene ber den kjøre noe via sin egen `Agentstatus`, ikke ved å kontakte PC-økten. En agent skal aldri starte eller kontakte økter på eierens maskiner, be om datamaskinmapper eller be eieren om tilgang til maskinene. Det låser økta til betrodde enheter for godt, og da kan koordinatoren ikke lenger nå den.
+
+- Bestilling: én kommentar i egen `Agentstatus` med denne formen:
+
+  ```
+  **Needs Windows PC**
+  - Ref: <branch or full commit SHA>
+  - Commands:
+    1. <command>
+    2. <command>
+  - Report: <what to return, e.g. test counts, exit codes, which pictures>
+  ```
+
+- PC-økten sjekker statussakene jevnlig, kjører bestillingen og svarer i samme sak med en kommentar som starter med `**Windows PC result**` og lenker til bestillingen. Det skjer bare når PC-en er på.
+- Tillatte kommandoer: `git fetch`, `git worktree`, `dotnet restore/build/test/publish/run`, `dotnet tool run docfx`, `pwsh -File tools/*.ps1` og skjermbildeverktøyene i repoet. PC-økten kjører alltid i en egen worktree fra `Ref`, aldri i eierens klone.
+- Aldri i en bestilling: push, commit, tag, release, sletting utenfor worktreen, nettverkskall som laster opp eller sender noe, eller lesing av lisensfiler, `*.local.ps1` eller andre hemmeligheter. PC-økten avviser slike bestillinger med en kommentar.
+- Bare bestillinger skrevet av HarrySolsem i private repoer kjøres. Bestillinger i offentlige repoer kjøres ikke.
+- Resultater som krever endring i koden, gjør agenten selv i sin egen gren etterpå.
 
 ## Hjelpebilder
 
