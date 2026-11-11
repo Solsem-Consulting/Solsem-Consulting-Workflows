@@ -129,7 +129,7 @@ Eieren har en PC-økt med Windows. Agentene ber den kjøre noe via sin egen `Age
   ```
 
 - PC-økten sjekker statussakene jevnlig, kjører bestillingen og svarer i samme sak med en kommentar som starter med `**Windows PC result**` og lenker til bestillingen. Det skjer bare når PC-en er på.
-- Tillatte kommandoer: `git fetch`, `git worktree`, `dotnet restore/build/test/publish/run`, `dotnet tool run docfx`, `pwsh -File tools/*.ps1` og skjermbildeverktøyene i repoet. PC-økten kjører alltid i en egen worktree fra `Ref`, aldri i eierens klone.
+- Tillatte kommandoer: `git clone` (bare inn i køens egen mappe, og bare `https://github.com/Solsem-Consulting/<repo>`), `git fetch`, `git worktree`, `dotnet restore/build/test/publish/run`, `dotnet tool run docfx`, `pwsh -File tools/*.ps1` og skjermbildeverktøyene i repoet. Køen bruker egne kloner i sin egen mappe og kjører alltid i en egen worktree fra `Ref`, aldri i eierens kloner.
 - Aldri i en bestilling: push, commit, tag, release, sletting utenfor worktreen, nettverkskall som laster opp eller sender noe, eller lesing av lisensfiler, `*.local.ps1` eller andre hemmeligheter. PC-økten avviser slike bestillinger med en kommentar.
 - Bare bestillinger skrevet av HarrySolsem i private repoer kjøres. Bestillinger i offentlige repoer kjøres ikke.
 - Resultater som krever endring i koden, gjør agenten selv i sin egen gren etterpå.
