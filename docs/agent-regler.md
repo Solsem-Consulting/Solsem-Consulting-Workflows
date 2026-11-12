@@ -17,6 +17,7 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 - Kode, kommentarer, commit-meldinger, PR-tekst, dokumentasjon og brukertekst skrives normalt.
 - Sikkerhetsadvarsler, lisensspørsmål og handlinger som ikke kan angres skrives i tydelig, full prosa.
 - Når agenten sier når eieren skal sjekke igjen (for eksempel «skriv status»), oppgir den alltid et klokkeslett i norsk tid (Europe/Oslo), for eksempel «Skriv «status» kl. 08:55». Aldri bare «om 20 minutter».
+- Alle klokkeslett skrives i norsk tid (Europe/Oslo), både i chat og på GitHub (statuser, saker, PR-er, køsvar). Aldri UTC eller «Z». På GitHub skrives de som `2026-11-12 09:15 (Oslo)` eller `09:15 (Oslo)`. Tider fra GitHub, logger og verktøy (som ofte er i UTC) regnes om før de skrives, for eksempel med `TZ=Europe/Oslo date`.
 
 ## Ikke gjett
 
