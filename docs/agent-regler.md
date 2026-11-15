@@ -75,11 +75,29 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
   - Done: …
   - PRs/issues: #…
   - Checked: … / Not checked: …
+  - Handoff: … (what the next session must know; "nothing" if none)
   - Needs owner: … (or "nothing")
   ```
 
+- `Handoff` er obligatorisk i den siste statusen før økta stopper.
+
 - Skriv aldri hemmeligheter, lisensinnhold eller persondata i saken.
 - Den daglige statusrutinen leser alle statussakene og skriver et sammendrag. Skriv derfor «Needs owner» tydelig.
+
+## Hukommelse mellom økter
+
+Hver agentøkt starter i en ny container og husker ingenting fra forrige økt. Det som skal huskes, skrives i repoet eller på GitHub:
+
+- **Regler og faste kommandoer:** `AGENTS.md` (eller `CLAUDE.md`) i repoet.
+- **Erfaringer:** `docs/agent-notes.md` i repoet, på engelsk, med disse overskriftene:
+  - `## Environment quirks` – særheter i miljøet (for eksempel tjenester som må startes først)
+  - `## Gotchas` – feller i koden, trege eller ustabile tester og hvordan de kjøres
+  - `## Owner decisions` – én linje per beslutning med lenke til saken eller kommentaren
+  - `## Open threads` – tråder som ikke er avsluttet, med lenke
+- Finnes ikke fila, oppretter agenten den i neste PR. Agenten oppdaterer den i samme PR som arbeidet, slik at den blir sett over sammen med koden. Utdaterte linjer slettes.
+- Hold fila kort. Det som er blitt en regel, flyttes til `AGENTS.md`. Status hører hjemme i `Agentstatus`, ikke i fila.
+- Aldri hemmeligheter, økt-ID-er, persondata eller lisensinnhold i fila.
+- **Ved start** leser agenten `AGENTS.md`, `docs/agent-notes.md`, de siste 5 kommentarene i `Agentstatus` (særlig `Handoff`) og saken, før den begynner.
 
 ## Jobb i kø: etiketten `agent`
 
