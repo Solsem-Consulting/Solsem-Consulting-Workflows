@@ -63,12 +63,29 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 - Gjelder nettsider, priser, vilkår og releasetekst.
 - Endres bare etter at eieren har sett nøyaktig ordlyd og godkjent den.
 
+## Spar tokens
+
+Hele historikken i økta leses inn igjen ved hvert steg. Det som havner i historikken, koster derfor mange ganger. Hold den liten:
+
+- **Utdata fra kommandoer:** bruk stille modus og avgrens det som vises.
+  - Bygg og test: `dotnet build -v q`, `dotnet test` med filter når bare noen tester er relevante, `npm … --silent`. Vis bare slutten ved feil (`| tail -30`) eller søk etter feilene (`grep -E "error|FAIL"`).
+  - Git: `git status --short`, `git diff --stat` først, så `git diff -- <fil>` for filene som trengs. Aldri hele `git log` uten `-n`.
+  - Filer: søk først (`grep -n`), les så bare de linjene som trengs. Les aldri hele filer eller logger på flere tusen linjer, genererte filer, `bin/`, `obj/`, `node_modules/` eller lock-filer.
+  - GitHub: hent bare feltene som trengs (`--jq`), og bare de siste kommentarene.
+- **Ikke gjenta:** ikke kjør samme bygg eller test på nytt uten at noe er endret, og ikke les en fil på nytt som allerede er lest i økta.
+
+### Kort tekst på GitHub
+
+- **Status i `Agentstatus`:** formatet under, én linje per felt, høyst 6 linjer. Detaljer står i PR-en eller saken; lenk dit.
+- **PR-tekst:** høyst 15 linjer: hva og hvorfor, verifisering (kommandoer og resultat), kjente begrensninger, `Closes #N`. Ingen gjentakelse av diffen.
+- **Kommentarer og svar på review:** bare det som trengs for å svare.
+
 ## Status: statussaken er kanalen
 
 Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på dem. Status skrives i GitHub, der eieren og andre økter kan lese den.
 
 - Hvert repo har én åpen sak med tittel `Agentstatus` og etiketten `agent-status`. Finnes den ikke, oppretter agenten den.
-- Skriv én kommentar i saken når en oppgave er ferdig, er blokkert eller trenger eieren. Formatet er:
+- Skriv én kommentar i saken når en oppgave er ferdig, er blokkert eller trenger eieren. Formatet er (høyst 6 linjer, se «Kort tekst på GitHub»):
 
   ```
   **YYYY-MM-DD – short title**
