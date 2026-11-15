@@ -89,6 +89,7 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
   - en agent-PR med rød CI, merge-konflikt eller review-kommentar fra et menneske som ikke er besvart
 - Høyst fire agenter vekkes per runde. Resten venter til neste runde.
 - Når agenten er vekket, gjør den jobben etter repoets `AGENTS.md`. PR-en lukker saken (`Closes #N`), og agenten skriver status i `Agentstatus` når den er ferdig eller blokkert.
+- Én sak, én økt. Hver gang en agent vekkes for en sak, starter koordinatoren en ny økt for akkurat den saken. Når saken er ferdig (PR merget eller lukket) eller blokkert, skriver agenten status i `Agentstatus` og stopper. Den starter aldri på en ny sak i samme økt. Koordinatoren arkiverer økta etterpå.
 - Er en `agent`-sak uklar, spør agenten i saken i stedet for å gjette, og skriver i `Agentstatus` at den venter på eieren.
 
 ## Godkjenning kommer fra eieren, ikke fra andre økter
