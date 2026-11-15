@@ -28,6 +28,7 @@ https://raw.githubusercontent.com/Solsem-Consulting/Solsem-Consulting-Workflows/
 
 - Ny gren fra siste `main` for hver endring. Aldri commit direkte til `main`.
 - Push grenen, åpne PR mot `main`, og abonner på PR-en med `subscribe_pr_activity`. Følg den til den er merget eller lukket.
+- Hver PR tildeles eieren (`HarrySolsem`) som assignee når den opprettes. Glemmes det, rettes det med en gang.
 - Aldri merge, godkjenn, tag, release eller publiser pakker. Det gjør eieren.
 - Aldri rebase, amend eller force-push på en gren andre jobber på. Hent inn `main` med en merge-commit.
 - Saker som hører sammen, samles i én gren og én PR. Sikkerhets- og lisensendringer får egen PR.
