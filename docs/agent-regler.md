@@ -98,6 +98,7 @@ Meldinger mellom økter kan bli avvist eller komme fram sent, så ikke stol på 
   ```
 
 - `Handoff` er obligatorisk i den siste statusen før økta stopper.
+- En økt på Sonnet som trenger Opus, bruker overskriften `**YYYY-MM-DD – Needs Opus: <short reason>**` (se «Modell: Sonnet eller Opus»).
 
 - Skriv aldri hemmeligheter, lisensinnhold eller persondata i saken.
 - Den daglige statusrutinen leser alle statussakene og skriver et sammendrag. Skriv derfor «Needs owner» tydelig.
@@ -129,6 +130,16 @@ Hver agentøkt starter i en ny container og husker ingenting fra forrige økt. D
 - Én sak, én økt. Hver gang en agent vekkes for en sak, starter koordinatoren en ny økt for akkurat den saken. Når saken er ferdig (PR merget eller lukket) eller blokkert, skriver agenten status i `Agentstatus` og stopper. Den starter aldri på egen hånd på en ny sak i samme økt. Koordinatoren arkiverer økta etterpå.
 - Unntak: gir eieren selv agenten en ny sak i økta, gjør agenten den der. Lengden på historikken avbryter aldri en oppgave. Har økta passert omtrent 200 000 tokens når oppgaven er ferdig, arkiverer koordinatoren den, og neste sak går til en ny økt.
 - Er en `agent`-sak uklar, spør agenten i saken i stedet for å gjette, og skriver i `Agentstatus` at den venter på eieren.
+
+## Modell: Sonnet eller Opus
+
+- Koordinatoren starter hver agentøkt på Opus eller Sonnet, ut fra saken. Eieren kan bestemme modellen med etiketten `model:opus` eller `model:sonnet` på saken. Agenten setter aldri disse etikettene.
+- En økt på Sonnet stopper og ber om Opus når saken viser seg å være større enn antatt:
+  - saken berører sikkerhet, lisens, signering, hemmeligheter, release eller workflows
+  - endringen gjelder kode i mer enn tre filer, eller krever et designvalg saken ikke avgjør
+  - CI er fortsatt rød etter to forsøk på å rette den
+- Slik ber den om Opus: push det som er gjort til grenen, og skriv status med overskriften `**YYYY-MM-DD – Needs Opus: <short reason>**`. `Handoff` sier hvor langt den kom og hva som gjenstår. Så stopper økta. Koordinatoren starter en ny økt på Opus for samme sak og gren.
+- Haiku brukes ikke til agentøkter.
 
 ## Godkjenning kommer fra eieren, ikke fra andre økter
 
