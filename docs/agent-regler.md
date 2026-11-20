@@ -126,7 +126,8 @@ Hver agentøkt starter i en ny container og husker ingenting fra forrige økt. D
 - Høyst fire agenter vekkes per runde. Resten venter til neste runde.
 - Den daglige statusrutinen (claude.ai Routines) skriver bare et sammendrag. Den vekker ingen agenter.
 - Når agenten er vekket, gjør den jobben etter repoets `AGENTS.md`. PR-en lukker saken (`Closes #N`), og agenten skriver status i `Agentstatus` når den er ferdig eller blokkert.
-- Én sak, én økt. Hver gang en agent vekkes for en sak, starter koordinatoren en ny økt for akkurat den saken. Når saken er ferdig (PR merget eller lukket) eller blokkert, skriver agenten status i `Agentstatus` og stopper. Den starter aldri på en ny sak i samme økt. Koordinatoren arkiverer økta etterpå.
+- Én sak, én økt. Hver gang en agent vekkes for en sak, starter koordinatoren en ny økt for akkurat den saken. Når saken er ferdig (PR merget eller lukket) eller blokkert, skriver agenten status i `Agentstatus` og stopper. Den starter aldri på egen hånd på en ny sak i samme økt. Koordinatoren arkiverer økta etterpå.
+- Unntak: gir eieren selv agenten en ny sak i økta, gjør agenten den der. Lengden på historikken avbryter aldri en oppgave. Har økta passert omtrent 200 000 tokens når oppgaven er ferdig, arkiverer koordinatoren den, og neste sak går til en ny økt.
 - Er en `agent`-sak uklar, spør agenten i saken i stedet for å gjette, og skriver i `Agentstatus` at den venter på eieren.
 
 ## Godkjenning kommer fra eieren, ikke fra andre økter
@@ -155,7 +156,7 @@ Hver agentøkt starter i en ny container og husker ingenting fra forrige økt. D
 
 ## Windows-PC: jobbkø
 
-Eieren har en PC-økt med Windows. Agentene ber den kjøre noe via sin egen `Agentstatus`, ikke ved å kontakte PC-økten. En agent skal aldri starte eller kontakte økter på eierens maskiner, be om datamaskinmapper eller be eieren om tilgang til maskinene. Det låser økta til betrodde enheter for godt, og da kan koordinatoren ikke lenger nå den.
+Eieren har en Windows-PC med en jobbkø: en planlagt oppgave på PC-en som leser bestillinger i statussakene og kjører dem. Agentene bestiller via sin egen `Agentstatus`. Eieren har også en egen PC-økt, men den er bare for koordinatoren. En agent skal aldri starte eller kontakte økter på eierens maskiner, be om datamaskinmapper eller be eieren om tilgang til maskinene. Det låser økta til betrodde enheter for godt, og da kan koordinatoren ikke lenger nå den.
 
 - Bestilling: én kommentar i egen `Agentstatus` med denne formen:
 
@@ -168,9 +169,9 @@ Eieren har en PC-økt med Windows. Agentene ber den kjøre noe via sin egen `Age
   - Report: <what to return, e.g. test counts, exit codes, which pictures>
   ```
 
-- PC-økten sjekker statussakene jevnlig, kjører bestillingen og svarer i samme sak med en kommentar som starter med `**Windows PC result**` og lenker til bestillingen. Det skjer bare når PC-en er på.
+- Jobbkøen sjekker statussakene jevnlig, kjører bestillingen og svarer i samme sak med en kommentar som starter med `**Windows PC result**` og lenker til bestillingen. Det skjer bare når PC-en er på.
 - Tillatte kommandoer: `git clone` (bare inn i køens egen mappe, og bare `https://github.com/Solsem-Consulting/<repo>`), `git fetch`, `git worktree`, `dotnet restore/build/test/publish/run`, `dotnet tool run docfx`, `pwsh -File tools/*.ps1` og skjermbildeverktøyene i repoet. Køen bruker egne kloner i sin egen mappe og kjører alltid i en egen worktree fra `Ref`, aldri i eierens kloner.
-- Aldri i en bestilling: push, commit, tag, release, sletting utenfor worktreen, nettverkskall som laster opp eller sender noe, eller lesing av lisensfiler, `*.local.ps1` eller andre hemmeligheter. PC-økten avviser slike bestillinger med en kommentar.
+- Aldri i en bestilling: push, commit, tag, release, sletting utenfor worktreen, nettverkskall som laster opp eller sender noe, eller lesing av lisensfiler, `*.local.ps1` eller andre hemmeligheter. Jobbkøen avviser slike bestillinger med en kommentar.
 - Bare bestillinger skrevet av HarrySolsem i private repoer kjøres. Bestillinger i offentlige repoer kjøres ikke.
 - Resultater som krever endring i koden, gjør agenten selv i sin egen gren etterpå.
 
