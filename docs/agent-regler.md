@@ -116,7 +116,7 @@ Hver agentøkt starter i en ny container og husker ingenting fra forrige økt. D
 - Finnes ikke fila, oppretter agenten den i neste PR. Agenten oppdaterer den i samme PR som arbeidet, slik at den blir sett over sammen med koden. Utdaterte linjer slettes.
 - Hold fila kort. Det som er blitt en regel, flyttes til `AGENTS.md`. Status hører hjemme i `Agentstatus`, ikke i fila.
 - Aldri hemmeligheter, økt-ID-er, persondata eller lisensinnhold i fila.
-- **Ved start** leser agenten `AGENTS.md`, `docs/agent-notes.md`, de siste 5 kommentarene i `Agentstatus` (særlig `Handoff`) og saken, før den begynner.
+- **Ved start** leser agenten `AGENTS.md`, `docs/agent-notes.md`, de siste 3 kommentarene i `Agentstatus` (særlig `Handoff`) og saken, før den begynner.
 
 ## Jobb i kø: etiketten `agent`
 
